@@ -1,0 +1,39 @@
+/* === GLOBAL SETTINGS === */
+body { font-family: 'Roboto', sans-serif; background-color: #12161A; color: #fff; }
+
+a { color: darkblue; font-weight: 500; }
+
+#tabContent, #stats, #achievements { background-color: #12161A; }
+
+/* === STATS === */
+.stat-container { display: grid; grid-template-columns: auto auto auto; grid-gap: 10px; padding-top: 10px; }
+
+.stat-item { background-color: #1c2126; padding: 20px; }
+
+.stat-title { color: #ADBCCC; display: table; font-size: 1rem; font-weight: 500; }
+
+.stat-value { color: #fff; font-size: 1.4rem; font-weight: 700; }
+
+/* === ACHIEVEMENTS === */
+#achievements { min-height: 100vh; padding: 8px 12px 8px 12px; }
+
+.list-group-item.achievement { background-color: #1c2126; border-left: 3px solid; color: #fff; margin: 0 0 8px 0; }
+
+.achievement.achievement-matches { border-left-color: #00C400; }
+
+.achievement.achievement-date { border-left-color: #96bfe6; }
+
+.achievement.achievement-frames { border-left-color: #FF9600; }
+
+.achievement.achievement-players { border-left-color: yellow; }
+
+.achievement.achievement-special { border-left-color: dodgerblue; }
+
+.achievement.achievement-elo { border-left-color: rebeccapurple; }
+
+.achievement.achievement-locked { border-left-color: dimgrey; opacity: 0.5; filter: grayscale(100%); }
+
+/* === MEDIA QUERIES === */
+@media (min-width: 581px) { span.nav-text { display: inline-block; } }
+@media (max-width: 580px) { span.nav-text { display: none; } }
+/*	Node.cloneNode()*/
