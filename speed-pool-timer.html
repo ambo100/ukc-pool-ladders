@@ -6,71 +6,40 @@
 <title>Speed Pool Timer</title>
 <style>
   :root{
-    --bg:#0d1117;
-    --card:#161b22;
-    --fg:#e6edf3;
-    --fg-muted:#8b949e;
-    --border:#30363d;
-
-    --primary:#22c55e;   /* green start */
-    --danger:#ef4444;    /* red end */
-    --info:#3b82f6;      /* blue reset */
+    --bg:#0d1117; --card:#161b22; --fg:#e6edf3; --fg-muted:#8b949e; --border:#30363d;
+    --primary:#22c55e; --danger:#ef4444; --info:#3b82f6;
   }
-  body{
-    margin:0;
-    font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-    background:var(--bg); color:var(--fg);
-    -webkit-font-smoothing:antialiased;
-  }
-  .tabs{
-    display:flex; border-bottom:1px solid var(--border); background:var(--card);
-  }
-  .tab{
-    flex:1; text-align:center; padding:14px; font-weight:600; cursor:pointer; color:var(--fg-muted);
-  }
-  .tab.active{ color:var(--fg); border-bottom:3px solid var(--primary);}
-  .view{display:none; padding:20px;}
-  .view.active{display:block;}
-  .time{
-    font-variant-numeric:tabular-nums;
-    font-size:72px;
-    text-align:center;
-    margin:24px 0;
-  }
-  .status{text-align:center;margin-bottom:24px;color:var(--fg-muted);}
-  .btn{
-    display:block;width:100%;padding:22px;font-size:26px;font-weight:600;
-    border:none;border-radius:12px;margin:14px 0;cursor:pointer;
-    color:white; transition:background .2s;
-  }
+  body{margin:0;font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+       background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;
+       display:flex;flex-direction:column;height:100vh;}
+  .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card);}
+  .tab{flex:1;text-align:center;padding:14px;font-weight:600;cursor:pointer;color:var(--fg-muted);}
+  .tab.active{color:var(--fg);border-bottom:3px solid var(--primary);}
+  .view{display:none;flex:1;display:flex;flex-direction:column;}
+  .view.active{display:flex;}
+  .time{font-variant-numeric:tabular-nums;font-size:64px;text-align:center;margin:12px 0;}
+  .status{text-align:center;margin:8px 0;color:var(--fg-muted);}
+  .meter-wrap{position:relative;height:14px;background:var(--border);
+              border-radius:7px;overflow:hidden;margin:10px 20px;}
+  .meter-bar{height:100%;width:0;background:var(--primary);transition:width .1s;}
+  .threshold{position:absolute;top:-2px;width:2px;height:18px;background:var(--danger);}
+  .slider-row{display:flex;align-items:center;gap:10px;margin:0 20px 10px;}
+  input[type=range]{flex:1;}
+  /* Button panel fills the rest of the view */
+  .button-panel{flex:1;display:flex;flex-direction:column;}
+  .btn{flex:1;display:flex;align-items:center;justify-content:center;
+       font-size:36px;font-weight:700;border:none;margin:0;
+       color:white;cursor:pointer;}
   .btn.start{background:var(--primary);}
   .btn.end{background:var(--danger);}
   .btn.reset{background:var(--info);}
-  .btn:active{opacity:.9;}
-  .meter-wrap{
-    position:relative;height:14px;background:var(--border);
-    border-radius:7px;overflow:hidden;margin:10px 0 20px;
-  }
-  .meter-bar{
-    height:100%;width:0;background:var(--primary);
-    transition:width .1s;
-  }
-  .threshold{
-    position:absolute;top:-2px;width:2px;height:18px;background:var(--danger);
-  }
-  .slider-row{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
-  input[type=range]{flex:1;}
-  ul{list-style:none;padding:0;margin:0;}
-  li{
-    display:flex;justify-content:space-between;align-items:center;
-    padding:10px 0;border-bottom:1px solid var(--border);
-  }
+  ul{list-style:none;padding:20px;margin:0;}
+  li{display:flex;justify-content:space-between;align-items:center;
+     padding:10px 0;border-bottom:1px solid var(--border);}
   li:last-child{border-bottom:none;}
-  li button{
-    background:var(--danger);color:white;border:none;padding:6px 12px;
-    border-radius:8px;cursor:pointer;font-size:14px;
-  }
-  h2{margin:16px 0 8px;font-size:18px;color:var(--fg);}
+  li button{background:var(--danger);color:white;border:none;padding:6px 12px;
+            border-radius:8px;cursor:pointer;font-size:14px;}
+  h2{margin:16px 20px 8px;font-size:18px;color:var(--fg);}
 </style>
 </head>
 <body>
@@ -80,22 +49,21 @@
 </div>
 
 <div id="timerView" class="view active">
-  <div class="time" id="time">00:00.00</div>
-  <div class="status" id="status">Adjust sensitivity and press Start.</div>
-  
-  <div class="meter-wrap">
-    <div id="meter" class="meter-bar"></div>
-    <div id="thresholdMarker" class="threshold"></div>
+  <div>
+    <div class="time" id="time">00:00.00</div>
+    <div class="status" id="status">Adjust sensitivity and press Start.</div>
+    <div class="meter-wrap"><div id="meter" class="meter-bar"></div><div id="thresholdMarker" class="threshold"></div></div>
+    <div class="slider-row">
+      <label for="threshold">Sensitivity</label>
+      <input id="threshold" type="range" min="0.02" max="0.5" step="0.01" value="0.2"/>
+      <span id="thVal">0.20</span>
+    </div>
   </div>
-  <div class="slider-row">
-    <label for="threshold">Sensitivity</label>
-    <input id="threshold" type="range" min="0.02" max="0.5" step="0.01" value="0.2"/>
-    <span id="thVal">0.20</span>
+  <div class="button-panel">
+    <button id="startBtn" class="btn start">START</button>
+    <button id="endBtn" class="btn end" style="display:none">END</button>
+    <button id="resetBtn" class="btn reset" style="display:none">RESET</button>
   </div>
-  
-  <button id="startBtn" class="btn start">START</button>
-  <button id="endBtn" class="btn end" style="display:none">END</button>
-  <button id="resetBtn" class="btn reset" style="display:none">RESET</button>
 </div>
 
 <div id="timesView" class="view">
@@ -111,119 +79,32 @@
   let timerRunning=false, armed=false, startPerf=0, timerRAF;
   let times=[]; let threshold=0.2;
 
-  const timeEl=document.getElementById('time');
-  const statusEl=document.getElementById('status');
-  const startBtn=document.getElementById('startBtn');
-  const endBtn=document.getElementById('endBtn');
-  const resetBtn=document.getElementById('resetBtn');
-  const meter=document.getElementById('meter');
-  const thresholdSlider=document.getElementById('threshold');
-  const thresholdMarker=document.getElementById('thresholdMarker');
-  const thVal=document.getElementById('thVal');
-  const timesList=document.getElementById('timesList');
-  const topList=document.getElementById('topList');
+  const timeEl=document.getElementById('time'),statusEl=document.getElementById('status');
+  const startBtn=document.getElementById('startBtn'),endBtn=document.getElementById('endBtn'),resetBtn=document.getElementById('resetBtn');
+  const meter=document.getElementById('meter'),thresholdSlider=document.getElementById('threshold'),thresholdMarker=document.getElementById('thresholdMarker'),thVal=document.getElementById('thVal');
+  const timesList=document.getElementById('timesList'),topList=document.getElementById('topList');
 
-  const fmt=(ms)=>{
-    const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000),cs=Math.floor(ms%1000/10);
-    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
-  };
+  const fmt=(ms)=>{const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000),cs=Math.floor(ms%1000/10);return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`};
 
-  function beep(freq=440,duration=200){
-    if(!audioCtx) return;
-    const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
-    osc.type="sine"; osc.frequency.value=freq; gain.gain.value=0.2;
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime+duration/1000);
-  }
-  function vibrate(ms=100){ if(navigator.vibrate) navigator.vibrate(ms); }
+  function beep(freq=440,duration=200){if(!audioCtx)return;const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type="sine";osc.frequency.value=freq;gain.gain.value=0.2;osc.connect(gain).connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration/1000);}
+  function vibrate(ms=100){if(navigator.vibrate)navigator.vibrate(ms);}
 
-  async function setupMic(){
-    if(audioCtx) return;
-    micStream=await navigator.mediaDevices.getUserMedia({audio:true});
-    audioCtx=new AudioContext();
-    const src=audioCtx.createMediaStreamSource(micStream);
-    analyser=audioCtx.createAnalyser(); analyser.fftSize=2048;
-    src.connect(analyser);
-  }
+  async function setupMic(){if(audioCtx)return;micStream=await navigator.mediaDevices.getUserMedia({audio:true});audioCtx=new AudioContext();const src=audioCtx.createMediaStreamSource(micStream);analyser=audioCtx.createAnalyser();analyser.fftSize=2048;src.connect(analyser);}
+  function listen(){const buf=new Float32Array(analyser.fftSize);const loop=()=>{analyser.getFloatTimeDomainData(buf);let sum=0;for(let i=0;i<buf.length;i++){sum+=buf[i]*buf[i];}const rms=Math.sqrt(sum/buf.length);meter.style.width=Math.min(100,(rms/0.5)*100)+'%';thresholdMarker.style.left=(threshold/0.5*100)+'%';thVal.textContent=threshold.toFixed(2);if(armed&&!timerRunning&&rms>=threshold){startTimer();armed=false;}rafId=requestAnimationFrame(loop);};rafId=requestAnimationFrame(loop);}
+  function startTimer(){timerRunning=true;startPerf=performance.now();startBtn.style.display='none';resetBtn.style.display='none';endBtn.style.display='block';statusEl.textContent='Timer running...';beep(880,150);vibrate(150);const tick=()=>{if(!timerRunning)return;timeEl.textContent=fmt(performance.now()-startPerf);timerRAF=requestAnimationFrame(tick);};timerRAF=requestAnimationFrame(tick);}
+  function endTimer(){if(!timerRunning)return;timerRunning=false;cancelAnimationFrame(timerRAF);const final=performance.now()-startPerf;timeEl.textContent=fmt(final);times.push(final);saveTimes();renderTimes();statusEl.textContent='Timer ended.';endBtn.style.display='none';resetBtn.style.display='block';beep(220,200);vibrate(200);}
+  function resetTimer(){timeEl.textContent='00:00.00';statusEl.textContent='Adjust sensitivity and press Start.';startBtn.style.display='block';endBtn.style.display='none';resetBtn.style.display='none';}
+  function renderTimes(){timesList.innerHTML='';times.forEach((t,i)=>{const li=document.createElement('li');li.textContent=fmt(t);const del=document.createElement('button');del.textContent='Erase';del.onclick=()=>{times.splice(i,1);saveTimes();renderTimes();};li.appendChild(del);timesList.appendChild(li);});const sorted=[...times].sort((a,b)=>a-b).slice(0,5);topList.innerHTML='';sorted.forEach(t=>{const li=document.createElement('li');li.textContent=fmt(t);topList.appendChild(li);});}
+  function saveTimes(){localStorage.setItem("speedPoolTimes",JSON.stringify(times));}
+  function loadTimes(){const data=localStorage.getItem("speedPoolTimes");if(data){times=JSON.parse(data);renderTimes();}}
 
-  function listen(){
-    const buf=new Float32Array(analyser.fftSize);
-    const loop=()=>{
-      analyser.getFloatTimeDomainData(buf);
-      let sum=0; for(let i=0;i<buf.length;i++){sum+=buf[i]*buf[i];}
-      const rms=Math.sqrt(sum/buf.length);
-      meter.style.width=Math.min(100,(rms/0.5)*100)+'%';
-      thresholdMarker.style.left=(threshold/0.5*100)+'%';
-      thVal.textContent=threshold.toFixed(2);
-      if(armed && !timerRunning && rms>=threshold){ startTimer(); armed=false; }
-      rafId=requestAnimationFrame(loop);
-    };
-    rafId=requestAnimationFrame(loop);
-  }
-
-  function startTimer(){
-    timerRunning=true; startPerf=performance.now();
-    startBtn.style.display='none'; resetBtn.style.display='none'; endBtn.style.display='block';
-    statusEl.textContent='Timer running...';
-    beep(880,150); vibrate(150);
-    const tick=()=>{
-      if(!timerRunning) return;
-      timeEl.textContent=fmt(performance.now()-startPerf);
-      timerRAF=requestAnimationFrame(tick);
-    };
-    timerRAF=requestAnimationFrame(tick);
-  }
-
-  function endTimer(){
-    if(!timerRunning) return;
-    timerRunning=false; cancelAnimationFrame(timerRAF);
-    const final=performance.now()-startPerf;
-    timeEl.textContent=fmt(final);
-    times.push(final); saveTimes(); renderTimes();
-    statusEl.textContent='Timer ended.'; endBtn.style.display='none'; resetBtn.style.display='block';
-    beep(220,200); vibrate(200);
-  }
-
-  function resetTimer(){
-    timeEl.textContent='00:00.00'; statusEl.textContent='Adjust sensitivity and press Start.';
-    startBtn.style.display='block'; endBtn.style.display='none'; resetBtn.style.display='none';
-  }
-
-  function renderTimes(){
-    timesList.innerHTML='';
-    times.forEach((t,i)=>{
-      const li=document.createElement('li'); li.textContent=fmt(t);
-      const del=document.createElement('button'); del.textContent='Erase';
-      del.onclick=()=>{times.splice(i,1);saveTimes();renderTimes();};
-      li.appendChild(del); timesList.appendChild(li);
-    });
-    const sorted=[...times].sort((a,b)=>a-b).slice(0,5);
-    topList.innerHTML=''; sorted.forEach(t=>{const li=document.createElement('li');li.textContent=fmt(t);topList.appendChild(li);});
-  }
-
-  function saveTimes(){ localStorage.setItem("speedPoolTimes", JSON.stringify(times)); }
-  function loadTimes(){
-    const data=localStorage.getItem("speedPoolTimes");
-    if(data){ times=JSON.parse(data); renderTimes(); }
-  }
-
-  startBtn.onclick=async()=>{ 
-    await setupMic(); 
-    armed=true; listen(); 
-    statusEl.textContent='Armed — waiting for break...'; 
-    beep(440,150); vibrate(100);
-  };
-  endBtn.onclick=endTimer;
-  resetBtn.onclick=resetTimer;
-  thresholdSlider.oninput=(e)=>{threshold=parseFloat(e.target.value);};
+  startBtn.onclick=async()=>{await setupMic();armed=true;listen();statusEl.textContent='Armed — waiting for break...';beep(440,150);vibrate(100);};
+  endBtn.onclick=endTimer;resetBtn.onclick=resetTimer;thresholdSlider.oninput=(e)=>{threshold=parseFloat(e.target.value);};
 
   const tabTimer=document.getElementById('tabTimer'),tabTimes=document.getElementById('tabTimes');
   const timerView=document.getElementById('timerView'),timesView=document.getElementById('timesView');
-  function show(tab){ 
-    if(tab==='timer'){tabTimer.classList.add('active');tabTimes.classList.remove('active');timerView.classList.add('active');timesView.classList.remove('active');}
-    else{tabTimes.classList.add('active');tabTimer.classList.remove('active');timesView.classList.add('active');timerView.classList.remove('active');}
-  }
-  tabTimer.onclick=()=>show('timer'); tabTimes.onclick=()=>show('times');
+  function show(tab){if(tab==='timer'){tabTimer.classList.add('active');tabTimes.classList.remove('active');timerView.classList.add('active');timesView.classList.remove('active');}else{tabTimes.classList.add('active');tabTimer.classList.remove('active');timesView.classList.add('active');timerView.classList.remove('active');}}
+  tabTimer.onclick=()=>show('timer');tabTimes.onclick=()=>show('times');
 
   loadTimes();
 })();
