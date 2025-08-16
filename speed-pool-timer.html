@@ -63,12 +63,12 @@
 
     <div class="meter-wrap" aria-label="Live audio level">
       <div class="meter-bar" id="meter"></div>
-      <div class="threshold" id="thresholdMarker" style="left:40%"></div>
+      <div class="threshold" id="thresholdMarker" style="left:75%"></div>
     </div>
 
     <div class="row slider" aria-label="Sensitivity">
       <label for="threshold" class="pill">Sensitivity</label>
-      <input id="threshold" type="range" min="0.02" max="1.00" step="0.01" value="0.20" />
+      <input id="threshold" type="range" min="0.02" max="0.50" step="0.01" value="0.20" />
       <span class="tiny" id="thVal">0.20 RMS</span>
     </div>
 
@@ -88,28 +88,39 @@
 (() => {
   'use strict';
 
+  // ------- State -------
   let audioCtx = null;
   let analyser = null;
   let micStream = null;
   let rafId = null;
-  let meterEl, statusEl, timeEl, micStateEl, lockStateEl, thresholdSlider, thresholdMarker, thValEl;
+  let meterEl = null;
+  let statusEl = null;
+  let timeEl = null;
+  let micStateEl = null;
+  let lockStateEl = null;
+  let thresholdSlider = null;
+  let thresholdMarker = null;
+  let thValEl = null;
 
   let listening = false;
   let armed = false;
   let timerRunning = false;
+  let breakDetected = false;
   let startPerf = 0;
   let timerRAF = 0;
   let wakeLock = null;
 
+  // Detection tuning
   const BUFFER_SIZE = 2048;
-  const FRAMES_OVER_THRESHOLD_TO_TRIGGER = 3;
+  const FRAMES_OVER_THRESHOLD_TO_TRIGGER = 3; // ~50ms at 60fps
   let framesAbove = 0;
 
+  // ------- Utilities -------
   const fmtTime = (ms) => {
     const total = Math.max(0, ms|0);
     const m = Math.floor(total / 60000);
     const s = Math.floor((total % 60000) / 1000);
-    const cs = Math.floor((total % 1000) / 10);
+    const cs = Math.floor((total % 1000) / 10); // centiseconds
     return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
   };
 
@@ -124,7 +135,7 @@
         setLockState(true);
         wakeLock.addEventListener('release', () => setLockState(false));
       }
-    }catch(_){}
+    }catch(_){ /* ignore */ }
   }
   async function releaseWakeLock(){
     try{ if (wakeLock) { await wakeLock.release(); wakeLock = null; setLockState(false);} }catch(_){}
@@ -133,28 +144,37 @@
   function updateThresholdUI(){
     const t = parseFloat(thresholdSlider.value);
     thValEl.textContent = t.toFixed(2) + ' RMS';
+    // Move marker: RMS range [0..0.5] maps to [0..100%]
     const percent = Math.min(100, Math.max(0, (t / parseFloat(thresholdSlider.max)) * 100));
     thresholdMarker.style.left = percent + '%';
   }
 
   async function setupMic(){
     if (audioCtx && micStream) return;
+
     try{
       micStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1,
+          sampleRate: { ideal: 48000 }
+        }
       });
       setMicState('granted');
     }catch(err){
       console.error(err);
       setMicState('blocked');
-      setStatus('Microphone permission denied.');
+      setStatus('Microphone permission denied. Enable mic and reload.');
       throw err;
     }
+
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const src = audioCtx.createMediaStreamSource(micStream);
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = BUFFER_SIZE;
-    analyser.smoothingTimeConstant = 0.04;
+    analyser.smoothingTimeConstant = 0.04; // snappy
     src.connect(analyser);
   }
 
@@ -167,9 +187,12 @@
     const loop = () => {
       if (!listening) return;
       analyser.getFloatTimeDomainData(floatBuf);
+      // RMS
       let sum = 0;
       for (let i=0;i<floatBuf.length;i++) { const x=floatBuf[i]; sum += x*x; }
       const rms = Math.sqrt(sum / floatBuf.length);
+
+      // meter 0..50% (0.5 RMS is already incredibly loud)
       const percent = Math.min(100, (rms / parseFloat(thresholdSlider.max)) * 100);
       meterEl.style.width = percent + '%';
 
@@ -184,6 +207,7 @@
           framesAbove = 0;
         }
       }
+
       rafId = requestAnimationFrame(loop);
     };
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -198,6 +222,7 @@
   }
 
   function onBreakDetected(rms){
+    breakDetected = true;
     armed = false;
     navigator.vibrate?.(40);
     setStatus(`Break detected (RMS ${rms.toFixed(2)}). Timer running…`);
@@ -229,13 +254,13 @@
     releaseWakeLock();
     const finalMs = performance.now() - startPerf;
     timeEl.textContent = fmtTime(finalMs);
-    setStatus('Timer stopped. Tap Reset or Re-arm.');
+    setStatus('Timer stopped. Tap Reset for the next rack, or Re-arm to listen again.');
     document.getElementById('stopBtn').disabled = true;
     document.getElementById('armBtn').disabled = false;
   }
 
   function resetAll(){
-    armed = false; timerRunning = false;
+    breakDetected = false; armed = false; timerRunning = false;
     cancelAnimationFrame(timerRAF);
     timeEl.textContent = '00:00.00';
     setStatus('Tap Arm for Break and do a soft clap to calibrate.');
@@ -244,6 +269,7 @@
     framesAbove = 0;
   }
 
+  // ------- Wire up UI -------
   window.addEventListener('load', () => {
     meterEl = document.getElementById('meter');
     statusEl = document.getElementById('status');
@@ -258,29 +284,35 @@
     document.getElementById('armBtn').addEventListener('click', async () => {
       try{
         await setupMic();
-        if (audioCtx.state === 'suspended') {
-          await audioCtx.resume(); // ensure resume inside user gesture
-        }
+        await audioCtx.resume(); // iOS requires user gesture
         if (timerRunning){
-          setStatus('Timer is running. End or Reset first.');
+          setStatus('Timer is running. End or Reset before re-arming.');
           return;
         }
         armed = true;
-        setStatus('Listening for break…');
+        setStatus('Listening for break… (sensitivity adjusts the red line)');
         startListening();
         requestWakeLock();
-      }catch(err){
-        console.error(err);
-        setStatus('Error starting microphone.');
-      }
-    });
+      }catch(_){}
+    }, {passive:true});
 
-    document.getElementById('stopBtn').addEventListener('click', stopTimer);
-    document.getElementById('resetBtn').addEventListener('click', resetAll);
+    document.getElementById('stopBtn').addEventListener('click', () => {
+      stopTimer();
+    }, {passive:true});
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      resetAll();
+    }, {passive:true});
+
     thresholdSlider.addEventListener('input', updateThresholdUI);
 
-    window.addEventListener('pagehide', () => { stopListening(); releaseWakeLock(); });
-    document.addEventListener('visibilitychange', () => { if (document.hidden){ stopListening(); releaseWakeLock(); } });
+    // Cleanup on unload
+    window.addEventListener('pagehide', async () => {
+      stopListening();
+      releaseWakeLock();
+      try{ await micStream?.getTracks().forEach(t => t.stop()); }catch(_){}
+      try{ await audioCtx?.close(); }catch(_){}
+    });
   });
 })();
 </script>
