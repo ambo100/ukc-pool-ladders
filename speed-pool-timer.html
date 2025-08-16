@@ -9,9 +9,11 @@
     --bg:#0d1117; --card:#161b22; --fg:#e6edf3; --fg-muted:#8b949e; --border:#30363d;
     --primary:#22c55e; --danger:#ef4444; --info:#3b82f6;
   }
-  body{margin:0;font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-       background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;
-       display:flex;flex-direction:column;height:100vh;}
+  body{
+    margin:0; font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column; height:100vh;
+  }
   .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card);}
   .tab{flex:1;text-align:center;padding:14px;font-weight:600;cursor:pointer;color:var(--fg-muted);}
   .tab.active{color:var(--fg);border-bottom:3px solid var(--primary);}
@@ -23,22 +25,27 @@
               border-radius:7px;overflow:hidden;margin:10px 20px;}
   .meter-bar{height:100%;width:0;background:var(--primary);transition:width .1s;}
   .threshold{position:absolute;top:-2px;width:2px;height:18px;background:var(--danger);}
-  .slider-row{display:flex;align-items:center;gap:10px;margin:0 20px 10px;}
+  .slider-row{display:flex;align-items:center;gap:10px;margin:0 20px 20px;}
   input[type=range]{flex:1;}
-  /* Button panel fills big area for giant buttons */
-  .button-panel{flex:1;display:flex;flex-direction:column;justify-content:stretch;}
-  .btn{flex:1;display:flex;align-items:center;justify-content:center;
-       font-size:42px;font-weight:700;border:none;margin:10px 20px;
-       border-radius:20px;color:white;cursor:pointer;}
+
+  /* Buttons: old style but taller */
+  .btn{
+    display:block;width:100%;padding:26px;font-size:28px;font-weight:700;
+    border:none;border-radius:14px;margin:12px 0;cursor:pointer;color:white;
+  }
   .btn.start{background:var(--primary);}
   .btn.end{background:var(--danger);}
   .btn.reset{background:var(--info);}
+  .btn:active{opacity:.9;}
+
   ul{list-style:none;padding:20px;margin:0;}
   li{display:flex;justify-content:space-between;align-items:center;
      padding:10px 0;border-bottom:1px solid var(--border);}
   li:last-child{border-bottom:none;}
-  li button{background:var(--danger);color:white;border:none;padding:6px 12px;
-            border-radius:8px;cursor:pointer;font-size:14px;}
+  li button{
+    background:none; border:none; color:var(--danger);
+    font-size:20px; cursor:pointer; font-weight:700;
+  }
   .record-time{font-weight:600;}
   .record-date{font-size:12px;color:var(--fg-muted);margin-left:8px;}
   h2{margin:16px 20px 8px;font-size:18px;color:var(--fg);}
@@ -61,7 +68,7 @@
       <span id="thVal">0.20</span>
     </div>
   </div>
-  <div class="button-panel">
+  <div>
     <button id="startBtn" class="btn start">START</button>
     <button id="endBtn" class="btn end" style="display:none">END</button>
     <button id="resetBtn" class="btn reset" style="display:none">RESET</button>
@@ -87,7 +94,6 @@
   const timesList=document.getElementById('timesList'),topList=document.getElementById('topList');
 
   const fmt=(ms)=>{const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000),cs=Math.floor(ms%1000/10);return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`};
-
   const fmtDate=(d)=> new Date(d).toLocaleString();
 
   function beep(freq=440,duration=200){if(!audioCtx) return;const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type="sine";osc.frequency.value=freq;gain.gain.value=0.2;osc.connect(gain).connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration/1000);}
@@ -98,7 +104,7 @@
   function startTimer(){timerRunning=true;startPerf=performance.now();startBtn.style.display='none';resetBtn.style.display='none';endBtn.style.display='block';statusEl.textContent='Timer running...';beep(880,150);vibrate(150);const tick=()=>{if(!timerRunning)return;timeEl.textContent=fmt(performance.now()-startPerf);timerRAF=requestAnimationFrame(tick);};timerRAF=requestAnimationFrame(tick);}
   function endTimer(){if(!timerRunning)return;timerRunning=false;cancelAnimationFrame(timerRAF);const final=performance.now()-startPerf;timeEl.textContent=fmt(final);times.push({time:final,date:Date.now()});saveTimes();renderTimes();statusEl.textContent='Timer ended.';endBtn.style.display='none';resetBtn.style.display='block';beep(220,200);vibrate(200);}
   function resetTimer(){timeEl.textContent='00:00.00';statusEl.textContent='Adjust sensitivity and press Start.';startBtn.style.display='block';endBtn.style.display='none';resetBtn.style.display='none';}
-  function renderTimes(){timesList.innerHTML='';times.forEach((rec,i)=>{const li=document.createElement('li');const span=document.createElement('span');span.innerHTML=`<span class="record-time">${fmt(rec.time)}</span> <span class="record-date">${fmtDate(rec.date)}</span>`;const del=document.createElement('button');del.textContent='Erase';del.onclick=()=>{times.splice(i,1);saveTimes();renderTimes();};li.appendChild(span);li.appendChild(del);timesList.appendChild(li);});const sorted=[...times].sort((a,b)=>a.time-b.time).slice(0,5);topList.innerHTML='';sorted.forEach(rec=>{const li=document.createElement('li');li.textContent=fmt(rec.time);topList.appendChild(li);});}
+  function renderTimes(){timesList.innerHTML='';times.forEach((rec,i)=>{const li=document.createElement('li');const span=document.createElement('span');span.innerHTML=`<span class="record-time">${fmt(rec.time)}</span> <span class="record-date">${fmtDate(rec.date)}</span>`;const del=document.createElement('button');del.textContent='×';del.onclick=()=>{times.splice(i,1);saveTimes();renderTimes();};li.appendChild(span);li.appendChild(del);timesList.appendChild(li);});const sorted=[...times].sort((a,b)=>a.time-b.time).slice(0,5);topList.innerHTML='';sorted.forEach(rec=>{const li=document.createElement('li');li.textContent=fmt(rec.time);topList.appendChild(li);});}
   function saveTimes(){localStorage.setItem("speedPoolTimes",JSON.stringify(times));}
   function loadTimes(){const data=localStorage.getItem("speedPoolTimes");if(data){times=JSON.parse(data);renderTimes();}}
 
