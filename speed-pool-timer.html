@@ -1,319 +1,168 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Speed Pool Timer</title>
 <style>
-  :root{
-    --bg:#0f1115; --fg:#e8e8ea; --muted:#9aa1a9; --accent:#4ade80; --accent-2:#60a5fa;
-    --danger:#ef4444; --card:#151823; --border:#202534;
-  }
-  @media (prefers-color-scheme: light){
-    :root{ --bg:#f7f7fb; --fg:#0e1116; --muted:#57606a; --accent:#059669; --accent-2:#2563eb;
-           --danger:#b91c1c; --card:#ffffff; --border:#e5e7eb; }
-  }
-  html,body{height:100%;}
-  body{
-    margin:0; font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    background:var(--bg); color:var(--fg); display:flex; align-items:center; justify-content:center; padding:24px;
-  }
-  .app{width:100%; max-width:720px; background:var(--card); border:1px solid var(--border);
-       border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.25);}
-  h1{margin:0 0 12px; font-size:22px; letter-spacing:.3px}
-  .time{
-    font-variant-numeric: tabular-nums;
-    font-size: clamp(48px, 12vw, 96px);
-    text-align:center; margin:6px 0 2px; letter-spacing:1px;
-  }
-  .status{ text-align:center; color:var(--muted); margin-bottom:16px; min-height:1.4em; }
-  .meter-wrap{
-    position:relative; height:18px; background:linear-gradient(90deg, #1d2433, #1a2030);
-    border:1px solid var(--border); border-radius:999px; overflow:hidden; margin:10px 0 6px;
-  }
-  .meter-bar{ height:100%; width:0%; background: linear-gradient(90deg,var(--accent), var(--accent-2)); transition:width .08s ease; }
-  .threshold{
-    position:absolute; top:-2px; width:2px; height:22px; background:var(--danger); opacity:.9;
-    transform:translateX(-1px);
-  }
-  .controls{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin:14px 0 6px; }
-  button{
-    appearance:none; border:none; border-radius:12px; padding:14px 12px; font-size:16px; font-weight:600;
-    background:#1f2937; color:#e5e7eb; border:1px solid var(--border); cursor:pointer;
-    transition:transform .02s ease, background .2s ease, opacity .2s ease;
-  }
-  button:active{ transform:translateY(1px); }
-  button.primary{ background:linear-gradient(180deg, #1f6feb, #2563eb); color:white; }
-  button.stop{ background:linear-gradient(180deg, #f43f5e, #ef4444); color:white; }
-  button:disabled{ opacity:.6; cursor:not-allowed; }
-  .row{ display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-  .slider{ flex:1 1 240px; display:flex; align-items:center; gap:10px; }
-  input[type="range"]{ width:100%; }
-  .tiny{ font-size:12px; color:var(--muted); }
-  .pill{ display:inline-block; padding:.2em .6em; border:1px solid var(--border); border-radius:999px; font-size:12px; color:var(--muted); }
-  .footer{ margin-top:10px; display:flex; justify-content:space-between; align-items:center; }
+  :root{ --bg:#111; --fg:#f8f8f8; --accent:#22c55e; --danger:#ef4444; --border:#333; }
+  body{margin:0;font:16px/1.4 system-ui;background:var(--bg);color:var(--fg);}
+  .tabs{display:flex;border-bottom:1px solid var(--border);}
+  .tab{flex:1;text-align:center;padding:14px;font-weight:600;cursor:pointer;}
+  .tab.active{background:#222;}
+  .view{display:none;padding:20px;}
+  .view.active{display:block;}
+  .time{font-variant-numeric:tabular-nums;font-size:64px;text-align:center;margin:20px 0;}
+  .status{text-align:center;margin-bottom:20px;color:#aaa;}
+  .btn{display:block;width:100%;padding:24px;font-size:28px;font-weight:700;
+       border:none;border-radius:14px;color:white;margin:10px 0;cursor:pointer;}
+  .btn.start{background:var(--accent);}
+  .btn.end{background:var(--danger);}
+  .btn.reset{background:#3b82f6;}
+  ul{list-style:none;padding:0;}
+  li{display:flex;justify-content:space-between;align-items:center;
+     padding:10px;border-bottom:1px solid var(--border);}
+  li button{background:var(--danger);color:white;border:none;padding:6px 12px;
+            border-radius:8px;cursor:pointer;}
+  h2{margin-top:0;}
 </style>
 </head>
 <body>
-  <main class="app" role="application" aria-label="Speed Pool Timer app">
-    <h1>Speed Pool Timer</h1>
+<div class="tabs">
+  <div id="tabTimer" class="tab active">Timer</div>
+  <div id="tabTimes" class="tab">Times</div>
+</div>
 
-    <div class="time" id="time">00:00.00</div>
-    <div class="status" id="status">Tap <b>Arm for Break</b> and do a soft clap to calibrate.</div>
+<div id="timerView" class="view active">
+  <div class="time" id="time">00:00.00</div>
+  <div class="status" id="status">Tap Start and break to begin timing.</div>
+  <button id="startBtn" class="btn start">START</button>
+  <button id="endBtn" class="btn end" style="display:none">END</button>
+  <button id="resetBtn" class="btn reset" style="display:none">RESET</button>
+</div>
 
-    <div class="meter-wrap" aria-label="Live audio level">
-      <div class="meter-bar" id="meter"></div>
-      <div class="threshold" id="thresholdMarker" style="left:75%"></div>
-    </div>
-
-    <div class="row slider" aria-label="Sensitivity">
-      <label for="threshold" class="pill">Sensitivity</label>
-      <input id="threshold" type="range" min="0.02" max="0.50" step="0.01" value="0.20" />
-      <span class="tiny" id="thVal">0.20 RMS</span>
-    </div>
-
-    <div class="controls">
-      <button id="armBtn" class="primary">Arm for Break</button>
-      <button id="stopBtn" class="stop" disabled>End Timer</button>
-      <button id="resetBtn">Reset</button>
-    </div>
-
-    <div class="footer">
-      <div class="tiny">Mic: <span id="micState">not started</span></div>
-      <div class="tiny">Wake lock <span id="lockState" class="pill">off</span></div>
-    </div>
-  </main>
+<div id="timesView" class="view">
+  <h2>All Times</h2>
+  <ul id="timesList"></ul>
+  <h2>Top 5</h2>
+  <ul id="topList"></ul>
+</div>
 
 <script>
 (() => {
-  'use strict';
+  let audioCtx, analyser, micStream, rafId;
+  let timerRunning=false, armed=false, startPerf=0, timerRAF;
+  let times=[];
 
-  // ------- State -------
-  let audioCtx = null;
-  let analyser = null;
-  let micStream = null;
-  let rafId = null;
-  let meterEl = null;
-  let statusEl = null;
-  let timeEl = null;
-  let micStateEl = null;
-  let lockStateEl = null;
-  let thresholdSlider = null;
-  let thresholdMarker = null;
-  let thValEl = null;
+  const timeEl=document.getElementById('time');
+  const statusEl=document.getElementById('status');
+  const startBtn=document.getElementById('startBtn');
+  const endBtn=document.getElementById('endBtn');
+  const resetBtn=document.getElementById('resetBtn');
+  const timesList=document.getElementById('timesList');
+  const topList=document.getElementById('topList');
 
-  let listening = false;
-  let armed = false;
-  let timerRunning = false;
-  let breakDetected = false;
-  let startPerf = 0;
-  let timerRAF = 0;
-  let wakeLock = null;
-
-  // Detection tuning
-  const BUFFER_SIZE = 2048;
-  const FRAMES_OVER_THRESHOLD_TO_TRIGGER = 3; // ~50ms at 60fps
-  let framesAbove = 0;
-
-  // ------- Utilities -------
-  const fmtTime = (ms) => {
-    const total = Math.max(0, ms|0);
-    const m = Math.floor(total / 60000);
-    const s = Math.floor((total % 60000) / 1000);
-    const cs = Math.floor((total % 1000) / 10); // centiseconds
+  const fmt=(ms)=>{
+    const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000),cs=Math.floor(ms%1000/10);
     return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
   };
 
-  const setStatus = (txt) => statusEl.textContent = txt;
-  const setMicState = (txt) => micStateEl.textContent = txt;
-  const setLockState = (on) => { lockStateEl.textContent = on ? 'on' : 'off'; };
-
-  async function requestWakeLock(){
-    try{
-      if ('wakeLock' in navigator) {
-        wakeLock = await navigator.wakeLock.request('screen');
-        setLockState(true);
-        wakeLock.addEventListener('release', () => setLockState(false));
-      }
-    }catch(_){ /* ignore */ }
-  }
-  async function releaseWakeLock(){
-    try{ if (wakeLock) { await wakeLock.release(); wakeLock = null; setLockState(false);} }catch(_){}
-  }
-
-  function updateThresholdUI(){
-    const t = parseFloat(thresholdSlider.value);
-    thValEl.textContent = t.toFixed(2) + ' RMS';
-    // Move marker: RMS range [0..0.5] maps to [0..100%]
-    const percent = Math.min(100, Math.max(0, (t / parseFloat(thresholdSlider.max)) * 100));
-    thresholdMarker.style.left = percent + '%';
-  }
-
   async function setupMic(){
-    if (audioCtx && micStream) return;
-
-    try{
-      micStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          channelCount: 1,
-          sampleRate: { ideal: 48000 }
-        }
-      });
-      setMicState('granted');
-    }catch(err){
-      console.error(err);
-      setMicState('blocked');
-      setStatus('Microphone permission denied. Enable mic and reload.');
-      throw err;
-    }
-
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = audioCtx.createMediaStreamSource(micStream);
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = BUFFER_SIZE;
-    analyser.smoothingTimeConstant = 0.04; // snappy
+    if(audioCtx) return;
+    micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    audioCtx=new AudioContext();
+    const src=audioCtx.createMediaStreamSource(micStream);
+    analyser=audioCtx.createAnalyser(); analyser.fftSize=2048;
     src.connect(analyser);
   }
 
-  function startListening(){
-    if (!audioCtx || !analyser) return;
-    listening = true;
-    framesAbove = 0;
-    const floatBuf = new Float32Array(analyser.fftSize);
-
-    const loop = () => {
-      if (!listening) return;
-      analyser.getFloatTimeDomainData(floatBuf);
-      // RMS
-      let sum = 0;
-      for (let i=0;i<floatBuf.length;i++) { const x=floatBuf[i]; sum += x*x; }
-      const rms = Math.sqrt(sum / floatBuf.length);
-
-      // meter 0..50% (0.5 RMS is already incredibly loud)
-      const percent = Math.min(100, (rms / parseFloat(thresholdSlider.max)) * 100);
-      meterEl.style.width = percent + '%';
-
-      if (armed && !timerRunning) {
-        const threshold = parseFloat(thresholdSlider.value);
-        if (rms >= threshold) {
-          framesAbove++;
-          if (framesAbove >= FRAMES_OVER_THRESHOLD_TO_TRIGGER) {
-            onBreakDetected(rms);
-          }
-        } else {
-          framesAbove = 0;
+  function listen(){
+    const buf=new Float32Array(analyser.fftSize);
+    const loop=()=>{
+      if(!timerRunning && armed){
+        analyser.getFloatTimeDomainData(buf);
+        let sum=0; for(let i=0;i<buf.length;i++){sum+=buf[i]*buf[i];}
+        const rms=Math.sqrt(sum/buf.length);
+        if(rms>0.2){ // spike threshold
+          startTimer();
+          armed=false;
         }
       }
-
-      rafId = requestAnimationFrame(loop);
+      rafId=requestAnimationFrame(loop);
     };
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(loop);
-  }
-
-  function stopListening(){
-    listening = false;
-    cancelAnimationFrame(rafId);
-    meterEl.style.width = '0%';
-  }
-
-  function onBreakDetected(rms){
-    breakDetected = true;
-    armed = false;
-    navigator.vibrate?.(40);
-    setStatus(`Break detected (RMS ${rms.toFixed(2)}). Timer running…`);
-    startTimer();
+    rafId=requestAnimationFrame(loop);
   }
 
   function startTimer(){
-    if (timerRunning) return;
-    timerRunning = true;
-    startPerf = performance.now();
-    requestWakeLock();
-    document.getElementById('stopBtn').disabled = false;
-    document.getElementById('armBtn').disabled = true;
-
-    const tick = () => {
-      if (!timerRunning) return;
-      const now = performance.now();
-      timeEl.textContent = fmtTime(now - startPerf);
-      timerRAF = requestAnimationFrame(tick);
+    if(timerRunning) return;
+    timerRunning=true;
+    startPerf=performance.now();
+    startBtn.style.display='none'; resetBtn.style.display='none'; endBtn.style.display='block';
+    statusEl.textContent='Timer running...';
+    const tick=()=>{
+      if(!timerRunning) return;
+      timeEl.textContent=fmt(performance.now()-startPerf);
+      timerRAF=requestAnimationFrame(tick);
     };
-    cancelAnimationFrame(timerRAF);
-    timerRAF = requestAnimationFrame(tick);
+    timerRAF=requestAnimationFrame(tick);
   }
 
-  function stopTimer(){
-    if (!timerRunning) return;
-    timerRunning = false;
-    cancelAnimationFrame(timerRAF);
-    releaseWakeLock();
-    const finalMs = performance.now() - startPerf;
-    timeEl.textContent = fmtTime(finalMs);
-    setStatus('Timer stopped. Tap Reset for the next rack, or Re-arm to listen again.');
-    document.getElementById('stopBtn').disabled = true;
-    document.getElementById('armBtn').disabled = false;
+  function endTimer(){
+    if(!timerRunning) return;
+    timerRunning=false; cancelAnimationFrame(timerRAF);
+    const final=performance.now()-startPerf;
+    timeEl.textContent=fmt(final);
+    times.push(final); renderTimes();
+    statusEl.textContent='Timer ended. Reset to go again.';
+    endBtn.style.display='none'; resetBtn.style.display='block';
   }
 
-  function resetAll(){
-    breakDetected = false; armed = false; timerRunning = false;
-    cancelAnimationFrame(timerRAF);
-    timeEl.textContent = '00:00.00';
-    setStatus('Tap Arm for Break and do a soft clap to calibrate.');
-    document.getElementById('stopBtn').disabled = true;
-    document.getElementById('armBtn').disabled = false;
-    framesAbove = 0;
+  function resetTimer(){
+    timeEl.textContent='00:00.00';
+    statusEl.textContent='Tap Start and break to begin timing.';
+    startBtn.style.display='block'; endBtn.style.display='none'; resetBtn.style.display='none';
   }
 
-  // ------- Wire up UI -------
-  window.addEventListener('load', () => {
-    meterEl = document.getElementById('meter');
-    statusEl = document.getElementById('status');
-    timeEl = document.getElementById('time');
-    micStateEl = document.getElementById('micState');
-    lockStateEl = document.getElementById('lockState');
-    thresholdSlider = document.getElementById('threshold');
-    thresholdMarker = document.getElementById('thresholdMarker');
-    thValEl = document.getElementById('thVal');
-    updateThresholdUI();
-
-    document.getElementById('armBtn').addEventListener('click', async () => {
-      try{
-        await setupMic();
-        await audioCtx.resume(); // iOS requires user gesture
-        if (timerRunning){
-          setStatus('Timer is running. End or Reset before re-arming.');
-          return;
-        }
-        armed = true;
-        setStatus('Listening for break… (sensitivity adjusts the red line)');
-        startListening();
-        requestWakeLock();
-      }catch(_){}
-    }, {passive:true});
-
-    document.getElementById('stopBtn').addEventListener('click', () => {
-      stopTimer();
-    }, {passive:true});
-
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      resetAll();
-    }, {passive:true});
-
-    thresholdSlider.addEventListener('input', updateThresholdUI);
-
-    // Cleanup on unload
-    window.addEventListener('pagehide', async () => {
-      stopListening();
-      releaseWakeLock();
-      try{ await micStream?.getTracks().forEach(t => t.stop()); }catch(_){}
-      try{ await audioCtx?.close(); }catch(_){}
+  function renderTimes(){
+    timesList.innerHTML='';
+    times.forEach((t,i)=>{
+      const li=document.createElement('li');
+      li.textContent=fmt(t);
+      const del=document.createElement('button'); del.textContent='Erase';
+      del.onclick=()=>{times.splice(i,1);renderTimes();};
+      li.appendChild(del);
+      timesList.appendChild(li);
     });
-  });
+    const sorted=[...times].sort((a,b)=>a-b).slice(0,5);
+    topList.innerHTML='';
+    sorted.forEach(t=>{
+      const li=document.createElement('li');
+      li.textContent=fmt(t);
+      topList.appendChild(li);
+    });
+  }
+
+  startBtn.onclick=async()=>{
+    await setupMic();
+    armed=true; listen();
+    statusEl.textContent='Listening for break...';
+  };
+  endBtn.onclick=endTimer;
+  resetBtn.onclick=resetTimer;
+
+  // Tabs
+  const tabTimer=document.getElementById('tabTimer');
+  const tabTimes=document.getElementById('tabTimes');
+  const timerView=document.getElementById('timerView');
+  const timesView=document.getElementById('timesView');
+  function showTab(tab){
+    if(tab==='timer'){tabTimer.classList.add('active');tabTimes.classList.remove('active');
+      timerView.classList.add('active');timesView.classList.remove('active');}
+    else{tabTimes.classList.add('active');tabTimer.classList.remove('active');
+      timesView.classList.add('active');timerView.classList.remove('active');}
+  }
+  tabTimer.onclick=()=>showTab('timer');
+  tabTimes.onclick=()=>showTab('times');
 })();
 </script>
 </body>
