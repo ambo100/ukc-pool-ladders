@@ -1,305 +1,307 @@
 <!doctype html>
-<html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+
 <head>
-<meta charset="utf-8">
-<meta name="google" content="notranslate">
-<meta http-equiv="Content-Language" content="en">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UKC Pool Ladders</title>
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZPN6MN3SHQ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-ZPN6MN3SHQ');
-</script>
-	
-<link rel="stylesheet" href="styles.css">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
-	
-<script src="sorttable.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<meta charset="utf-8">
+	<meta name="google" content="notranslate">
+	<meta http-equiv="Content-Language" content="en">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>UKC Pool/Snooker Ladders</title>
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZPN6MN3SHQ"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() { dataLayer.push(arguments); }
+		gtag('js', new Date());
+		gtag('config', 'G-ZPN6MN3SHQ');
+	</script>
 
-<script>	
-const accessToken = "AIzaSyBzx9C98J2--o4tZgymHKYSM5DnOgcte8o";
-const rangeMatchesPool = "Pool!X:AG";
-const rangeMatchesSnooker = "Snooker!I:R";
-const sheetId2021 = "x";
-	
-const fullUrlWithoutParams = window.location.protocol + "//" + window.location.host + window.location.pathname;	
-const params = new URLSearchParams(window.location.search);
-const playerName = params.get('name');	
-const gameType = params.get('game') == "s" ? rangeMatchesSnooker : rangeMatchesPool;
-const sheetId = params.get('sheetId') == null ? "16MHKcccaEF5Dp_hGUSZKSK6N3NY-CcKzyeLeHTM7ZRI" : params.get('sheetId');
-const url = "https://sheets.googleapis.com/v4/spreadsheets/" + sheetId + "/values/" + gameType + "?key=" + accessToken;
-const reducer = (accumulator, curr) => accumulator + curr;
-	
-let results;
-let rowCount;
-let newCell, newText, newRow;
-	
-let stats = {
-	matchesWon: 0, 
-	matchesLost: 0,
-	framesWon: 0,
-	framesLost: 0,
-	winStreakCurrent: 0, 
-	winStreakBest: 0,
-	whitewashWins: 0,
-	whiteWashConsecutiveWins: 0,
-	whiteWashConsecutiveMax: 0,
-	deciderWins: 0,
-	deciderLosses: 0,
-	uniquePlayers: [],
-	playersBeaten: [],
-	matchCount: [0],
-	matchDates: [],
-	eloHistory: [1000],
-	eloGainsTotal: 0,
-	eloGains: [],
-	eloLosses: [],
-	achievements: 0,
-};
-let achievements = [
-    { name: "Starter", type: "matches", progress: () => stats.matchesWon + stats.matchesLost, condition: 5, description: "Play 5 matches." },
-    { name: "Winner", type: "matches", progress: () => stats.matchesWon, condition: 1, description: "Win a match." },
-    { name: "Match Player", type: "matches", progress: () => stats.matchesWon, condition: 10, description: "Win 10 matches." },
-    { name: "Champion", type: "matches", progress: () => stats.matchesWon, condition: 25, description: "Win 25 matches." },
-    { name: "Titan", type: "matches", progress: () => stats.matchesWon, condition: 50, description: "Win 50 matches." },
+	<link rel="stylesheet" href="styles.css">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+		crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+	<script src="sorttable.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    { name: "Re-racker", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequest(stats.matchDates)), condition: 3, description: "Play 3 matches in a day." },
-    { name: "Mitch Match", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequest(stats.matchDates)), condition: 5, description: "Play 5 matches in a day." },
-    { name: "Visitor", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 5, description: "Play on 5 different days." },
-    { name: "Regular", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 15, description: "Play on 15 different days." },
-    { name: "Resident", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 30, description: "Play on 30 different days." },
+	<script>
+		const accessToken = "AIzaSyBzx9C98J2--o4tZgymHKYSM5DnOgcte8o";
+		const rangeMatchesPool = "Pool!X:AG";
+		const rangeMatchesSnooker = "Snooker!I:R";
 
-	{ name: "Frame Maker", type: "frames", progress: () => stats.framesWon, condition: 50, description: "Win 50 frames." },
-    { name: "Centurian", type: "frames", progress: () => stats.framesWon, condition: 100, description: "Win 100 frames." },
-    { name: "Leaguer", type: "frames", progress: () => stats.framesWon, condition: 250, description: "Win 250 frames." },
-    { name: "Full Circle", type: "frames", progress: () => stats.framesWon, condition: 360, description: "Play 360 frames." },
+		const fullUrlWithoutParams = window.location.protocol + "//" + window.location.host + window.location.pathname;
+		const params = new URLSearchParams(window.location.search);
+		const playerName = params.get('name');
+		const gameType = params.get('game') == "s" ? rangeMatchesSnooker : rangeMatchesPool;
+		const sheetId = params.get('sheetId') == null ? "16MHKcccaEF5Dp_hGUSZKSK6N3NY-CcKzyeLeHTM7ZRI" : params.get('sheetId');
+		const url = "https://sheets.googleapis.com/v4/spreadsheets/" + sheetId + "/values/" + gameType + "?key=" + accessToken;
+		const reducer = (accumulator, curr) => accumulator + curr;
 
-    { name: "Mingler", type: "players", progress: () => stats.uniquePlayers.length, condition: 5, description: "Play against 5 players." },
-    { name: "Mixer", type: "players", progress: () => stats.uniquePlayers.length, condition: 10, description: "Play against 10 players." },
-    { name: "Socialite", type: "players", progress: () => stats.uniquePlayers.length, condition: 15, description: "Play against 15 players." },
-    { name: "Brawler", type: "players", progress: () => stats.playersBeaten.length, condition: 5, description: "Beat 5 different players." },
-    { name: "Warrior", type: "players", progress: () => stats.playersBeaten.length, condition: 10, description: "Beat 10 different players." },
-    { name: "Gladiator", type: "players", progress: () => stats.playersBeaten.length, condition: 15, description: "Beat 15 different players." },
+		let results;
+		let rowCount;
+		let newCell, newText, newRow;
 
-    { name: "Tie Breaker", type: "special", progress: () => stats.deciderWins, condition: 1, description: "Win a match in a decider." },
-    { name: "Decision Maker", type: "special", progress: () => stats.deciderWins, condition: 5, description: "Win 5 matches in a decider." },
-    { name: "Waterfall", type: "special", progress: () => stats.whitewashWins, condition: 1, description: "Win a match without losing a frame." },
-    { name: "Dominator", type: "special", progress: () => stats.whitewashWins, condition: 5, description: "Win 5 matches without losing a frame." },
-    { name: "The Washing Machine", type: "special", progress: () => stats.whiteWashConsecutiveMax, condition: 2, description: "Win 2 consecutive whitewashes." },
-    { name: "Back to Back", type: "special", progress: () => stats.winStreakBest, condition: 2, description: "Win 2 matches in a row." },
-    { name: "Streaker", type: "special", progress: () => stats.winStreakBest, condition: 5, description: "Win 5 matches in a row." },
-    { name: "Untouchable", type: "special", progress: () => stats.winStreakBest, condition: 10, description: "Win 10 matches in a row." },
-	// { name: "Killjoy", type: "special", progress: x, condition: 5, description: "End a players win streak of five or more matches." },
+		let stats = {
+			matchesWon: 0,
+			matchesLost: 0,
+			framesWon: 0,
+			framesLost: 0,
+			winStreakCurrent: 0,
+			winStreakBest: 0,
+			whitewashWins: 0,
+			whiteWashConsecutiveWins: 0,
+			whiteWashConsecutiveMax: 0,
+			deciderWins: 0,
+			uniquePlayers: [],
+			playersBeaten: [],
+			matchCount: [0],
+			matchDates: [],
+			eloHistory: [1000],
+			eloGainsTotal: 0,
+			eloGains: [],
+			eloLosses: [],
+			achievements: 0,
+			opponentsWhitewashed: [],
+		};
+		let achievements = [
+			{ name: "Starter", type: "matches", progress: () => stats.matchesWon + stats.matchesLost, condition: 5, description: "Play 5 matches." },
+			{ name: "Winner", type: "matches", progress: () => stats.matchesWon, condition: 1, description: "Win a match." },
+			{ name: "Match Player", type: "matches", progress: () => stats.matchesWon, condition: 10, description: "Win 10 matches." },
+			{ name: "Champion", type: "matches", progress: () => stats.matchesWon, condition: 25, description: "Win 25 matches." },
+			{ name: "Titan", type: "matches", progress: () => stats.matchesWon, condition: 50, description: "Win 50 matches." },
 
-    { name: "Collector", type: "elo", progress: () => stats.eloGainsTotal, condition: 100, description: "Take 100 Elo in total." },
-    { name: "Harvester", type: "elo", progress: () => stats.eloGainsTotal, condition: 500, description: "Take 500 Elo in total." },
-    { name: "Farmer", type: "elo", progress: () => stats.eloGainsTotal, condition: 1000, description: "Take 1000 Elo in total." },
-    { name: "Pocket Change", type: "elo", progress: () => Math.min(...stats.eloGains) <= 10 ? 1 : 0, condition: 1, description: "Take 10 or less Elo from an opponent." },
-    { name: "Underdog", type: "elo", progress: () => Math.max(...stats.eloGains) > 25 ? 1 : 0, condition: 1, description: "Take 26 or more Elo from an opponent." },
-    { name: "Deep Screw", type: "elo", progress: () => Math.max(...stats.eloGains) >= 40 ? 1 : 0, condition: 1, description: "Take 40 or more Elo from an opponent." }
-	
-	// Revenger - Beat a player you previously lost against.
-	// Snookered - Play a game in the snooker league.
-	
-	// - Play at least one match on each day of the week
-	//Deadweight, massé, plant,
-];
+			{ name: "Re-racker", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequest(stats.matchDates)), condition: 3, description: "Play 3 matches in a day." },
+			{ name: "Mitch Match", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequest(stats.matchDates)), condition: 5, description: "Play 5 matches in a day." },
+			{ name: "Visitor", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 5, description: "Play on 5 different days." },
+			{ name: "Regular", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 15, description: "Play on 15 different days." },
+			{ name: "Resident", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 30, description: "Play on 30 different days." },
 
-window.onload = function() {
-	if (playerName.length > 16) {
-		document.getElementById("playerName").innerHTML = playerName.replace(/^(\w)\w*\s(\w+)/, "$1. $2");
-	} else {
-		document.getElementById("playerName").innerHTML = playerName;
-	}
-	
-	getSheetData();
-}
+			{ name: "Frame Maker", type: "frames", progress: () => stats.framesWon, condition: 50, description: "Win 50 frames." },
+			{ name: "Centurian", type: "frames", progress: () => stats.framesWon, condition: 100, description: "Win 100 frames." },
+			{ name: "Leaguer", type: "frames", progress: () => stats.framesWon, condition: 250, description: "Win 250 frames." },
+			{ name: "Full Circle", type: "frames", progress: () => stats.framesWon + stats.framesLost, condition: 360, description: "Play 360 frames." },
 
-function getSheetData(gameType) {	
-	let xmlhttp = new XMLHttpRequest();	
-	xmlhttp.onreadystatechange = function() 
-	{
-  		if (this.readyState == 4 && this.status == 200) 
-		{
-    		 results = JSON.parse(this.responseText);
-			 rowCount = Object.keys(results.values).length;
-			 displayResults();
-  		}
-	}
-		
-	xmlhttp.open("GET", url, true);
-	xmlhttp.send();	
-}
-	
-function displayResults() {	
-	
-	let resultsTableBody = document.getElementById("results-body");
-		
-	for(let i = 4; i < rowCount; i++)
-	{
-		if(results.values[i][2] == playerName || results.values[i][9] == playerName)
-		{
-			newRow = resultsTableBody.insertRow(0);
-					
-			addNewCell(resultsTableBody.rows.length);
-			
-			//Format as Date as shorthand 			
-			let matchDate = results.values[i][0].replace(/(\d+\/\d+\/)\d{2}(\d+)/,"$1$2"); 	//Date
-			addNewCell(matchDate);
-			stats.matchDates.push(matchDate);
-			
-			//Format rows depending on win/loss
-			if(results.values[i][2] == playerName)
-			{
-				newRow.classList.add("table-success");
-				addNewCell(results.values[i][9], true);					//Opponent name
-				addNewCell(results.values[i][4]);						//ELO Difference
-				addNewCell(results.values[i][5],false,true);			//Match Score
-				
-				//Stats
-				stats.uniquePlayers.push(results.values[i][9]);
-				stats.playersBeaten.push(results.values[i][9]);
-				let eloGain = parseInt(results.values[i][4].substring(2));
-				stats.eloHistory.push(+stats.eloHistory[stats.eloHistory.length-1] + +eloGain);
-				stats.eloGains.push(eloGain);
-								
-				stats.winStreakCurrent++;
-				
-				if(stats.winStreakCurrent > stats.winStreakBest)
-					stats.winStreakBest = stats.winStreakCurrent;
-				
-				let playerScore = parseInt(results.values[i][5].replace(/(\d+).+(\d+)/,"$1"));
-				let opponentScore = parseInt(results.values[i][5].replace(/\d+.+(\d+)/,"$1"));
-				
-				if(opponentScore == 0){
-					stats.whitewashWins++;
-					stats.whiteWashConsecutiveWins++;
-					
-					if(stats.whiteWashConsecutiveWins > stats.whiteWashConsecutiveMax){
-						stats.whiteWashConsecutiveMax = stats.whiteWashConsecutiveWins;
+			{ name: "Mingler", type: "players", progress: () => stats.uniquePlayers.length, condition: 5, description: "Play against 5 players." },
+			{ name: "Mixer", type: "players", progress: () => stats.uniquePlayers.length, condition: 10, description: "Play against 10 players." },
+			{ name: "Socialite", type: "players", progress: () => stats.uniquePlayers.length, condition: 15, description: "Play against 15 players." },
+			{ name: "Brawler", type: "players", progress: () => stats.playersBeaten.length, condition: 5, description: "Beat 5 different players." },
+			{ name: "Warrior", type: "players", progress: () => stats.playersBeaten.length, condition: 10, description: "Beat 10 different players." },
+			{ name: "Gladiator", type: "players", progress: () => stats.playersBeaten.length, condition: 15, description: "Beat 15 different players." },
+			{ name: "Dishwasher", type: "players", progress: () => stats.opponentsWhitewashed.length, condition: 3, description: "Whitewash 3 different opponents." },
+
+			{ name: "Tie Breaker", type: "special", progress: () => stats.deciderWins, condition: 1, description: "Win a match in a decider." },
+			{ name: "Decision Maker", type: "special", progress: () => stats.deciderWins, condition: 5, description: "Win 5 matches in a decider." },
+			{ name: "Waterfall", type: "special", progress: () => stats.whitewashWins, condition: 1, description: "Win a match without losing a frame." },
+			{ name: "Dominator", type: "special", progress: () => stats.whitewashWins, condition: 5, description: "Win 5 matches without losing a frame." },
+			{ name: "The Washing Machine", type: "special", progress: () => stats.whiteWashConsecutiveMax, condition: 2, description: "Win 2 consecutive whitewashes." },
+			{ name: "Back to Back", type: "special", progress: () => stats.winStreakBest, condition: 2, description: "Win 2 matches in a row." },
+			{ name: "Streaker", type: "special", progress: () => stats.winStreakBest, condition: 5, description: "Win 5 matches in a row." },
+			{ name: "Untouchable", type: "special", progress: () => stats.winStreakBest, condition: 10, description: "Win 10 matches in a row." },
+
+			{ name: "Collector", type: "elo", progress: () => stats.eloGainsTotal, condition: 100, description: "Take 100 Elo in total." },
+			{ name: "Harvester", type: "elo", progress: () => stats.eloGainsTotal, condition: 500, description: "Take 500 Elo in total." },
+			{ name: "Farmer", type: "elo", progress: () => stats.eloGainsTotal, condition: 1000, description: "Take 1000 Elo in total." },
+			{ name: "Pocket Change", type: "elo", progress: () => Math.min(...stats.eloGains) <= 10 ? 1 : 0, condition: 1, description: "Take 10 or less Elo from an opponent." },
+			{ name: "Underdog", type: "elo", progress: () => Math.max(...stats.eloGains) > 25 ? 1 : 0, condition: 1, description: "Take 26 or more Elo from an opponent." },
+			{ name: "Deep Screw", type: "elo", progress: () => Math.max(...stats.eloGains) >= 40 ? 1 : 0, condition: 1, description: "Take 40 or more Elo from an opponent." }
+
+			// ACHIEVEMENT IDEAS
+			// Revenger - Beat a player you previously lost against.
+			// KIlljoy - End a players win streak of five or more matches.
+			// Snookered - Play a game in the snooker league.
+
+		];
+
+		window.onload = function () {
+			if (playerName.length > 16) {
+				document.getElementById("playerName").innerHTML = playerName.replace(/^(\w)\w*\s(\w+)/, "$1. $2");
+			} else {
+				document.getElementById("playerName").innerHTML = playerName;
+			}
+
+			getSheetData();
+		}
+
+		function getSheetData() {
+			let xmlhttp = new XMLHttpRequest();
+			xmlhttp.onreadystatechange = function () {
+				if (this.readyState == 4 && this.status == 200) {
+					results = JSON.parse(this.responseText);
+					rowCount = Object.keys(results.values).length;
+					displayResults();
+				}
+			}
+
+			xmlhttp.open("GET", url, true);
+			xmlhttp.send();
+		}
+
+		function displayResults() {
+
+			let resultsTableBody = document.getElementById("results-body");
+
+			for (let i = 4; i < rowCount; i++) {
+				if (results.values[i][2] == playerName || results.values[i][9] == playerName) {
+					newRow = resultsTableBody.insertRow(0);
+
+					addNewCell(resultsTableBody.rows.length);
+
+					//Format as Date as shorthand 			
+					let matchDate = results.values[i][0].replace(/(\d+\/\d+\/)\d{2}(\d+)/, "$1$2"); 	//Date
+					addNewCell(matchDate);
+					stats.matchDates.push(matchDate);
+
+					//Format rows depending on win/loss
+					if (results.values[i][2] == playerName) {
+						newRow.classList.add("table-success");
+						addNewCell(results.values[i][9], true);					//Opponent name
+						addNewCell(results.values[i][4]);						//ELO Difference
+						addNewCell(results.values[i][5], false, true);			//Match Score
+
+						//Stats
+						stats.uniquePlayers.push(results.values[i][9]);
+						stats.playersBeaten.push(results.values[i][9]);
+						let eloGain = parseInt(results.values[i][4].substring(2));
+						stats.eloHistory.push(+stats.eloHistory[stats.eloHistory.length - 1] + +eloGain);
+						stats.eloGains.push(eloGain);
+
+						stats.winStreakCurrent++;
+
+						if (stats.winStreakCurrent > stats.winStreakBest)
+							stats.winStreakBest = stats.winStreakCurrent;
+
+						let playerScore = parseInt(results.values[i][5].replace(/(\d+).+(\d+)/, "$1"));
+						let opponentScore = parseInt(results.values[i][5].replace(/\d+.+(\d+)/, "$1"));
+
+						if (opponentScore == 0) {
+							stats.whitewashWins++;
+							stats.whiteWashConsecutiveWins++;
+
+							const opponentName = results.values[i][9];
+							if (opponentName && !stats.opponentsWhitewashed.includes(opponentName)) {
+								stats.opponentsWhitewashed.push(opponentName);
+							}
+
+							if (stats.whiteWashConsecutiveWins > stats.whiteWashConsecutiveMax) {
+								stats.whiteWashConsecutiveMax = stats.whiteWashConsecutiveWins;
+							}
+						}
+						else {
+							stats.whiteWashConsecutiveWins = 0;
+						}
+
+						if (opponentScore == playerScore - 1) {
+							stats.deciderWins++;
+						}
+
+						stats.matchesWon++;
+
+						stats.framesWon += playerScore;
+						stats.framesLost += opponentScore;
+
 					}
+					else {
+						newRow.classList.add("table-danger");
+						addNewCell(results.values[i][2], true);												//Opponent name
+						addNewCell(results.values[i][7]);													//ELO Difference
+						addNewCell(results.values[i][5].replace(/(\d+).+(\d+)/, "$2-$1"), false, false);		//Match Score (Reversed)
+
+						//Stats
+						stats.uniquePlayers.push(results.values[i][2]);
+						let eloLoss = parseInt(results.values[i][4].substring(2));
+						stats.eloHistory.push(+stats.eloHistory[stats.eloHistory.length - 1] - +eloLoss);
+						stats.eloLosses.push(eloLoss);
+
+						stats.matchesLost++;
+
+						let playerScore = parseInt(results.values[i][5].replace(/\d+.+(\d+)/, "$1"));
+						let opponentScore = parseInt(results.values[i][5].replace(/(\d+).+(\d+)/, "$1"));
+
+						stats.framesWon += playerScore;
+						stats.framesLost += opponentScore;
+						stats.winStreakCurrent = 0;
+						stats.whiteWashConsecutiveWins = 0;
+					}
+
+					stats.matchCount.push(resultsTableBody.rows.length);
 				}
-				else{
-					stats.whiteWashConsecutiveWins = 0;
+			}
+
+			//Reduce data
+			stats.uniquePlayers = [...new Set(stats.uniquePlayers)];
+			stats.playersBeaten = [...new Set(stats.playersBeaten)];
+			stats.eloGainsTotal = stats.eloGains.reduce(reducer, 0);
+
+			calculateAchievements();
+			calculateStats();
+
+			generateHeadToHead();
+
+			x(stats);
+		}
+
+		function addNewCell(text, isLink, winState) {
+			newCell = newRow.insertCell();
+
+			if (isLink) {
+				let anchor = document.createElement("a");
+				anchor.innerHTML = arguments[0];
+				anchor.setAttribute("href", fullUrlWithoutParams + "?sheetId=" + sheetId + "&game=" + params.get('game') + "&name=" + arguments[0]);
+				anchor.setAttribute("class", "text-decoration-none");
+
+				newCell.appendChild(anchor);
+			}
+			else {
+				newText = document.createTextNode(arguments[0]);
+				newCell.appendChild(newText);
+
+				if (winState == true) {
+					newCell.classList.add("cell-win");
+				}
+				if (winState == false) {
+					newCell.classList.add("cell-lose");
+				}
+			}
+		}
+
+		function calculateStats() {
+			addStat("matchesWon", stats.matchesWon);
+			addStat("matchesLost", stats.matchesLost);
+			addStat("matchWinRate", +(stats.matchesWon / (stats.matchesWon + stats.matchesLost) * 100).toFixed(1).toString() + "%");
+			addStat("framesWon", stats.framesWon);
+			addStat("framesLost", stats.framesLost);
+			addStat("frameWinRate", +(stats.framesWon / (stats.framesWon + stats.framesLost) * 100).toFixed(1).toString() + "%");
+			addStat("winStreakCurrent", stats.winStreakCurrent);
+			addStat("winStreakBest", stats.winStreakBest);
+			addStat("opponents", stats.uniquePlayers.length);
+			addStat("whitewashWins", stats.whitewashWins);
+			addStat("deciderWins", stats.deciderWins);
+			// addStat("eloGain", ( stats.eloGainsTotal));
+			// addStat("averageEloLoss", ( calculateAverage(stats.eloLosses).toFixed(0) ));
+			// addStat("riskRate", ( calculateAverage(stats.eloGains).toFixed(0) ));
+
+			addStat("achievements", stats.achievements + "/" + achievements.length);
+			eloChart.update();
+		}
+
+		function calculateAchievements() {
+			const achievementsContainer = document.getElementById("achievements");
+
+			let lastType = '';
+
+			achievements.forEach(({ name, type, progress, condition, description }) => {
+				const progressValue = progress();
+				const achievementProgress = Math.min(progressValue, condition);
+
+				if (lastType !== type) {
+					if (lastType !== '') {
+						achievementsContainer.innerHTML += '<br>';
+					}
+					lastType = type;
 				}
 
-				if(opponentScore == playerScore - 1)
-					stats.deciderWins++;
-				
-				stats.matchesWon++;
-				
-				stats.framesWon += playerScore;
-				stats.framesLost += opponentScore;
-			}
-			else
-			{
-				newRow.classList.add("table-danger");
-				addNewCell(results.values[i][2], true);												//Opponent name
-				addNewCell(results.values[i][7]);													//ELO Difference
-				addNewCell(results.values[i][5].replace(/(\d+).+(\d+)/,"$2-$1"),false,false);		//Match Score (Reversed)
-				
-				//Stats
-				stats.uniquePlayers.push(results.values[i][2]);	
-				let eloLoss = parseInt(results.values[i][4].substring(2));
-				stats.eloHistory.push(+stats.eloHistory[stats.eloHistory.length-1] - +eloLoss);
-				stats.eloLosses.push(eloLoss);
-				
-				stats.matchesLost++;
-				
-				let playerScore = parseInt(results.values[i][5].replace(/\d+.+(\d+)/,"$1"));
-				let opponentScore = parseInt(results.values[i][5].replace(/(\d+).+(\d+)/,"$1"));
-				
-				stats.framesWon += playerScore;
-				stats.framesLost += opponentScore;
-				stats.winStreakCurrent = 0;
-				stats.whiteWashConsecutiveWins = 0;
-			}
-			
-			stats.matchCount.push(resultsTableBody.rows.length);
-		}
-	}
-	
-	//Reduce data
-	stats.uniquePlayers = [...new Set(stats.uniquePlayers)];
-	stats.playersBeaten = [...new Set(stats.playersBeaten)];
-	stats.eloGainsTotal = stats.eloGains.reduce(reducer, 0);
-	
-	calculateStats();
-	eloChart.update();
-
-	x(stats);
-}	
-	
-function addNewCell(text, isLink, winState) {
-	newCell = newRow.insertCell();
-	
-	if(isLink)
-	{
-		let anchor = document.createElement("a");
-		anchor.innerHTML = arguments[0];
-		anchor.setAttribute("href", fullUrlWithoutParams + "?sheetId=" + sheetId + "&game=" + params.get('game') + "&name=" + arguments[0]);
-		anchor.setAttribute("class", "text-decoration-none");
-
-		newCell.appendChild(anchor);
-	}
-	else
-	{
-		newText = document.createTextNode(arguments[0]);
-		newCell.appendChild(newText);
-
-		if(winState == true){
-			newCell.classList.add("cell-win");
-		}
-		if(winState == false){
-			newCell.classList.add("cell-lose");
-		}
-	}
-}
-
-function calculateStats(){	
-	addStat("matchesWon", stats.matchesWon);
-	addStat("matchesLost", stats.matchesLost);
-	addStat("matchWinRate", +(stats.matchesWon / (stats.matchesWon + stats.matchesLost) * 100).toFixed(1).toString() + "%");
-	addStat("framesWon", stats.framesWon);
-	addStat("framesLost", stats.framesLost);
-	addStat("frameWinRate", +(stats.framesWon / (stats.framesWon + stats.framesLost) * 100).toFixed(1).toString() + "%");
-	addStat("winStreakCurrent", stats.winStreakCurrent);
-	addStat("winStreakBest", stats.winStreakBest);
-	addStat("opponents", stats.uniquePlayers.length);
-	addStat("whitewashWins", stats.whitewashWins);
-	addStat("deciderWins", stats.deciderWins);
-	// addStat("eloGain", ( stats.eloGainsTotal));
-	// addStat("averageEloLoss", ( calculateAverage(stats.eloLosses).toFixed(0) ));
-	// addStat("riskRate", ( calculateAverage(stats.eloGains).toFixed(0) ));
-
-
-	calculateAchievements();
-	addStat("achievements", stats.achievements + "/34");	
-}
-	
-function calculateAchievements() {
-    const achievementsContainer = document.getElementById("achievements");
-
-    let lastType = '';
-
-    achievements.forEach(({ name, type, progress, condition, description }) => {
-        const progressValue = progress();
-        const achievementProgress = Math.min(progressValue, condition);
-
-        if (lastType !== type) {
-            if (lastType !== '') { 
-                achievementsContainer.innerHTML += '<br>'; 
-            }
-            lastType = type;
-        }
-
-        const achievementHTML = `
+				const achievementHTML = `
             <div class="col-md-4 list-group-item achievement achievement-${type} ${progressValue >= condition ? '' : 'achievement-locked'}">
                 <div class="d-flex w-100 justify-content-between">
                     <h5 class="mb-1">${name}</h5>
@@ -309,169 +311,329 @@ function calculateAchievements() {
             </div>
         `;
 
-        achievementsContainer.innerHTML += achievementHTML;
+				achievementsContainer.innerHTML += achievementHTML;
 
-		if(progressValue >= condition){
-			stats.achievements++;
+				if (progressValue >= condition) {
+					stats.achievements++;
+				}
+			});
 		}
-    });
-}
 
-function addStat(statId, statText) {
-	
-	document.getElementById("stat-" + statId).innerHTML = statText;
-}
-	
-function findMostFrequest(array) {
-    let compare = "";
-    let mostFreq = "";
-    
-    array.reduce((acc, val) => {
-      if(val in acc){               // if key already exists
-         acc[val]++;                // then increment it by 1
-      }else{
-         acc[val] = 1;      // or else create a key with value 1
-      }
-      if(acc[val] > compare){   // if value of that key is greater
-                                // than the compare value.
-         compare = acc[val];    // than make it a new compare value.
-         mostFreq = val;        // also make that key most frequent.
-      }
-      return acc;
-    }, {})
-	
-	return mostFreq;
-}
-	
-function getOccurrence(array, value) {
-    var count = 0;
-    array.forEach((v) => (v === value && count++));
-    return count;
-}
-	
-function calculateAverage(array) {
-  if (array.length === 0) return 0;
-  const sum = array.reduce((acc, value) => acc + value, 0);
-  return sum / array.length;
-}
+		function addStat(statId, statText) {
+			document.getElementById("stat-" + statId).innerHTML = statText;
+		}
 
-function x(str = "DEBUG"){
-	console.log(str);
-}
-	
-</script>
+		function findMostFrequest(array) {
+			let compare = "";
+			let mostFreq = "";
+
+			array.reduce((acc, val) => {
+				if (val in acc) {               // if key already exists
+					acc[val]++;                // then increment it by 1
+				} else {
+					acc[val] = 1;      // or else create a key with value 1
+				}
+				if (acc[val] > compare) {   // if value of that key is greater
+					// than the compare value.
+					compare = acc[val];    // than make it a new compare value.
+					mostFreq = val;        // also make that key most frequent.
+				}
+				return acc;
+			}, {})
+
+			return mostFreq;
+		}
+
+		function getOccurrence(array, value) {
+			var count = 0;
+			array.forEach((v) => (v === value && count++));
+			return count;
+		}
+
+		function calculateAverage(array) {
+			if (array.length === 0) return 0;
+			const sum = array.reduce((acc, value) => acc + value, 0);
+			return sum / array.length;
+		}
+
+		function generateHeadToHead(sortBy = "name") {
+			if (!results || !rowCount) return;
+
+			const tally = {};
+
+			for (let i = 4; i < rowCount; i++) {
+				const row = results.values[i];
+				if (!row) continue;
+
+				const p1 = row[2];
+				const p2 = row[9];
+
+				if (p1 !== playerName && p2 !== playerName) continue;
+
+				const opponent = (p1 === playerName ? p2 : p1);
+
+				if (!tally[opponent]) {
+					tally[opponent] = {
+						wins: 0,
+						losses: 0,
+						framesFor: 0,
+						framesAgainst: 0,
+						eloGained: 0,
+						eloLost: 0
+					};
+				}
+
+				const score = (row[5] || "").toString();
+				const m = score.match(/(\d+)\D+(\d+)/);
+				if (!m) continue;
+
+				let p1s = parseInt(m[1], 10);
+				let p2s = parseInt(m[2], 10);
+
+				const rawElo = row[4] || "";
+				const eloAmount = parseInt(rawElo.substring(2));
+
+				if (p1 === playerName) {
+					tally[opponent].wins++;
+					tally[opponent].framesFor += p1s;
+					tally[opponent].framesAgainst += p2s;
+					tally[opponent].eloGained += eloAmount;
+				} else {
+					tally[opponent].losses++;
+					tally[opponent].framesFor += p2s;
+					tally[opponent].framesAgainst += p1s;
+					tally[opponent].eloLost += eloAmount;
+				}
+			}
+
+			let opponents = Object.keys(tally).map(name => {
+				const d = tally[name];
+				const matchTotal = d.wins + d.losses;
+				const frameTotal = d.framesFor + d.framesAgainst;
+
+				return {
+					name,
+					...d,
+					matchWinRate: matchTotal === 0 ? 0 : d.wins / matchTotal,
+					frameWinRate: frameTotal === 0 ? 0 : d.framesFor / frameTotal,
+					eloNet: d.eloGained - d.eloLost
+				};
+			});
+
+			opponents.sort((a, b) => {
+				switch (sortBy) {
+					case "played": return b.wins + b.losses;
+					case "wins": return b.wins - a.wins;
+					case "losses": return b.losses - a.losses;
+					case "winrate": return b.matchWinRate - a.matchWinRate;
+					case "framesFor": return b.framesFor - a.framesFor;
+					case "framesAgainst": return b.framesAgainst - a.framesAgainst;
+					case "framerate": return b.frameWinRate - a.frameWinRate;
+					case "eloGained": return b.eloGained - a.eloGained;
+					case "eloLost": return b.eloLost - a.eloLost;
+					case "eloNet": return b.eloNet - a.eloNet;
+					case "name":
+					default:
+						return a.name.localeCompare(b.name);
+				}
+			});
+
+			const container = document.getElementById("h2h-opponent-list");
+			container.innerHTML = "";
+
+			if (opponents.length === 0) {
+				container.innerHTML = `<p>No head-to-head data available.</p>`;
+				return;
+			}
+
+			opponents.forEach(op => {
+				const col = document.createElement("div");
+				col.className = "col-lg-3 col-md-4 col-sm-6";
+
+				col.innerHTML = `
+					<div class="h2h-card">
+						<div class="h2h-name">${op.name}</div>
+
+						<div class="h2h-stat-group">
+
+							<div class="h2h-stat-item">
+								<div class="h2h-stat-title">Matches Won</div>
+								<div class="h2h-stat-value">${op.wins}</div>
+							</div>
+
+							<div class="h2h-stat-item">
+								<div class="h2h-stat-title">Matches Lost</div>
+								<div class="h2h-stat-value">${op.losses}</div>
+							</div>
+
+							<div class="h2h-stat-item">
+								<div class="h2h-stat-title">Match Win Rate</div>
+								<div class="h2h-stat-value">${(op.matchWinRate * 100).toFixed(1)}%</div>
+							</div>
+
+							<div class="h2h-stat-item">
+								<div class="h2h-stat-title">Frames Won</div>
+								<div class="h2h-stat-value">${op.framesFor}</div>
+							</div>
+
+							<div class="h2h-stat-item">
+								<div class="h2h-stat-title">Frames Lost</div>
+								<div class="h2h-stat-value">${op.framesAgainst}</div>
+							</div>
+
+							<div class="h2h-stat-item">
+								<div class="h2h-stat-title">Frame Win Rate</div>
+								<div class="h2h-stat-value">${(op.frameWinRate * 100).toFixed(1)}%</div>
+							</div>
+
+							<div class="h2h-stat-item">
+								<div class="h2h-stat-title">Elo Gained</div>
+								<div class="h2h-stat-value">${op.eloGained}</div>
+							</div>
+
+							<div class="h2h-stat-item">
+								<div class="h2h-stat-title">Elo Lost</div>
+								<div class="h2h-stat-value">${op.eloLost}</div>
+							</div>
+
+							<div class="h2h-stat-item">
+								<div class="h2h-stat-title">Elo Net</div>
+								<div class="h2h-stat-value">${op.eloNet}</div>
+							</div>
+
+						</div>
+					</div>
+				`;
+
+				container.appendChild(col);
+			});
+		}
+
+		function x(str = "DEBUG") {
+			console.log(str);
+		}
+
+	</script>
 </head>
 
 <body>
-	
-<ul class="nav nav-tabs" id="myTab" role="tablist" style="font-size: large;">
-	
-  <li class="nav-item">
-    <a class="nav-link disabled" id="playerName" tabindex="-1" aria-disabled="true"></a>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link active" id="matches-tab" data-bs-toggle="tab" data-bs-target="#matches" type="button" role="tab" aria-controls="matches" aria-selected="true" ><i class="bi bi-table nav-icon" style="color: green;"></i> <span class="nav-text">Matches</span></button>
-  </li>
-  <li class="nav-item " role="presentation">
-    <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button" role="tab" aria-controls="stats" aria-selected="false" ><i class="bi bi-graph-up nav-icon" style="color: blue;"></i> <span class="nav-text">Stats</span></button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="achievements-tab" data-bs-toggle="tab" data-bs-target="#achievements" type="button" role="tab" aria-controls="achievements" aria-selected="false"><i class="bi bi-trophy nav-icon" style="color: darkorange;"></i> <span class="nav-text">Achievements</span></button>
-  </li>	
 
-  <!-- <li class="nav-item" role="presentation">
-    <button class="nav-link" id="live-tab" data-bs-toggle="tab" data-bs-target="#live" type="button" role="tab" aria-controls="live" aria-selected="false">LIVE</button>
-  </li> -->
+	<ul class="nav nav-tabs" id="myTab" role="tablist" style="font-size: large;">
+		<li class="nav-item">
+			<a class="nav-link disabled" id="playerName" tabindex="-1" aria-disabled="true"></a>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link active" id="matches-tab" data-bs-toggle="tab" data-bs-target="#matches"
+				type="button" role="tab" aria-controls="matches" aria-selected="true"><i class="bi bi-table nav-icon"
+					style="color: green;"></i> <span class="nav-text">Matches</span></button>
+		</li>
+		<li class="nav-item " role="presentation">
+			<button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button"
+				role="tab" aria-controls="stats" aria-selected="false"><i class="bi bi-graph-up nav-icon"
+					style="color: blue;"></i> <span class="nav-text">Stats</span></button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="head-to-head-tab" data-bs-toggle="tab" data-bs-target="#head-to-head"
+				type="button" role="tab" aria-controls="live" aria-selected="false"><i class="bi bi-people nav-icon"
+					style="color: red;"></i> <span class="nav-text">Head-to-head</span></button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="achievements-tab" data-bs-toggle="tab" data-bs-target="#achievements"
+				type="button" role="tab" aria-controls="achievements" aria-selected="false"><i
+					class="bi bi-trophy nav-icon" style="color: darkorange;"></i> <span
+					class="nav-text">Achievements</span></button>
+		</li>
+	</ul>
 
-</ul>
-	
-<div class="tab-content" id="tabContent">
+	<div class="tab-content" id="tabContent">
 
-	<div id="matches" class="table-responsive tab-pane fade show active" role="tabpanel" aria-labelledby="matches-tab" >
-	   <table class="table table-dark table-striped table-bordered sortable" id="results">
-		  <thead class="thead-light">
-			 <tr>
-				<th scope="col" class="sorttable_numeric">#</th>
-				<th scope="col" class="sorttable_nosort">Date</th>
-				<th scope="col" class="text-truncate">Opponent</th>
-				<th scope="col" class="sorttable_numeric">Elo</th>
-				<th scope="col" class="">Score</th>
-			 </tr>
-		  </thead>
-		  <tbody id="results-body">
-		  </tbody>
-	   </table>
-	</div>
-	
-	<div  id="stats" class="container-fluid tab-pane fade show" role="tabpanel" aria-labelledby="stats-tab" style="min-height: 100vh;">
-		<div class="stat-container">
+		<div id="matches" class="table-responsive tab-pane fade show active" role="tabpanel"
+			aria-labelledby="matches-tab" style="min-height: 100vh;">
+			<table class="table table-dark table-striped table-bordered sortable" id="results">
+				<thead class="thead-light">
+					<tr>
+						<th scope="col" class="sorttable_numeric">#</th>
+						<th scope="col" class="sorttable_nosort">Date</th>
+						<th scope="col" class="text-truncate">Opponent</th>
+						<th scope="col" class="sorttable_numeric">Elo</th>
+						<th scope="col" class="">Score</th>
+					</tr>
+				</thead>
+				<tbody id="results-body">
+				</tbody>
+			</table>
+		</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Matches Won</span>
-				<span class="stat-value" id="stat-matchesWon">-</span>
-			</div>
+		<div id="stats" class="container-fluid tab-pane fade show" role="tabpanel" aria-labelledby="stats-tab"
+			style="min-height: 100vh;">
+			<div class="stat-container">
 
-			<div class="stat-item">
-				<span class="stat-title">Matches Lost</span>
-				<span class="stat-value" id="stat-matchesLost">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Matches Won</span>
+					<span class="stat-value" id="stat-matchesWon">-</span>
+				</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Match Win Rate</span>
-				<span class="stat-value" id="stat-matchWinRate">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Matches Lost</span>
+					<span class="stat-value" id="stat-matchesLost">-</span>
+				</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Frames Won</span>
-				<span class="stat-value" id="stat-framesWon">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Match Win Rate</span>
+					<span class="stat-value" id="stat-matchWinRate">-</span>
+				</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Frames Lost</span>
-				<span class="stat-value" id="stat-framesLost">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Frames Won</span>
+					<span class="stat-value" id="stat-framesWon">-</span>
+				</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Frame Win Rate</span>
-				<span class="stat-value" id="stat-frameWinRate">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Frames Lost</span>
+					<span class="stat-value" id="stat-framesLost">-</span>
+				</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Whitewash Wins</span>
-				<span class="stat-value" id="stat-whitewashWins">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Frame Win Rate</span>
+					<span class="stat-value" id="stat-frameWinRate">-</span>
+				</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Decider Wins</span>
-				<span class="stat-value" id="stat-deciderWins">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Whitewash Wins</span>
+					<span class="stat-value" id="stat-whitewashWins">-</span>
+				</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Opponents</span>
-				<span class="stat-value" id="stat-opponents">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Decider Wins</span>
+					<span class="stat-value" id="stat-deciderWins">-</span>
+				</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Current Streak</span>
-				<span class="stat-value" id="stat-winStreakCurrent">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Opponents</span>
+					<span class="stat-value" id="stat-opponents">-</span>
+				</div>
 
-			<div class="stat-item">
-				<span class="stat-title">Best Streak</span>
-				<span class="stat-value" id="stat-winStreakBest">-</span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Current Streak</span>
+					<span class="stat-value" id="stat-winStreakCurrent">-</span>
+				</div>
 
-			<div class="stat-item" >
-				<span class="stat-title">Achievements</span>
-				<span class="stat-value" id="stat-achievements"></span>
-			</div>
+				<div class="stat-item">
+					<span class="stat-title">Best Streak</span>
+					<span class="stat-value" id="stat-winStreakBest">-</span>
+				</div>
 
-			<!-- <div class="stat-item" >
+				<div class="stat-item">
+					<span class="stat-title">Achievements</span>
+					<span class="stat-value" id="stat-achievements"></span>
+				</div>
+
+				<!-- <div class="stat-item" >
 				<span class="stat-title">Elo Gained</span>
 				<span class="stat-value" id="stat-eloGain"></span>
 			</div> -->
 
-			<!-- <div class="stat-item" >
+				<!-- <div class="stat-item" >
 				<span class="stat-title">-</span>
 				<span class="stat-value" id="stat-averageEloLoss"></span>
 			</div>
@@ -481,48 +643,87 @@ function x(str = "DEBUG"){
 				<span class="stat-value" id="stat-riskRate"></span>
 			</div> -->
 
-		</div>
+			</div>
 
-		<br>
+			<br>
 
-		<div class="container-fluid d-flex justify-content-center" style="max-height: 350px;">
-		<canvas id="elo-chart" style="width:100%; "></canvas>
-		</div>
+			<div class="container-fluid d-flex justify-content-center" style="max-height: 350px;">
+				<canvas id="elo-chart" style="width:100%; "></canvas>
+			</div>
 
-		<script>
-		let eloChart = new Chart("elo-chart", {
-			type: "line",
-			data: {
-				labels: stats.matchCount,
-				datasets: [{
-					data: stats.eloHistory,
-					backgroundColor: "#ffffff",
-					borderColor: "#ADBCCC",
-					color: "#ffffff",
-					lineTension: 0.00,
-				}]
-			},
-			options: {
-				plugins: {
-					legend: {
-						display: false
+			<script>
+				let eloChart = new Chart("elo-chart", {
+					type: "line",
+					data: {
+						labels: stats.matchCount,
+						datasets: [
+							{
+								data: stats.eloHistory,
+								backgroundColor: "#ffffff",
+								borderColor: "#ADBCCC",
+								color: "#ffffff",
+								lineTension: 0,
+							}
+						]
 					},
-				},
-				maintainAspectRatio: false,
-			}
-		});
-		</script>
-		
-		
-	</div>
-	
-	<div id="achievements" class="container-fluid tab-pane fade show" role="tabpanel" aria-labelledby="achievements-tab" style="min-height: 100vh;">
-	</div>	
+					options: {
+						maintainAspectRatio: false,
+						plugins: { legend: { display: false } },
+						scales: {
+							y: {
+								grid: {
+									color: 'rgba(255,255,255,0.12)'
+								}
+							}
+						}
+					}
+				});
+			</script>
+		</div>
 
-	<div id="head-to-head" class="container-fluid tab-pane fade show" role="tabpanel" aria-labelledby="head-to-head-tab" style="min-height: 100vh;">
-	
+		<div id="head-to-head" class="tab-pane fade show" role="tabpanel" aria-labelledby="head-to-head-tab"
+			style="min-height: 100vh;">
+
+			<div class="container-fluid pt-3">
+				<div class="d-flex justify-content-end mb-3">
+					<div class="dropdown">
+						<button class="btn btn-secondary dropdown-toggle" type="button" id="h2hSortMenu"
+							data-bs-toggle="dropdown">
+							<span id="h2hSortLabel">Name (A–Z)</span>
+						</button>
+						<ul class="dropdown-menu">
+							<li><a class="dropdown-item" data-label="Name (A–Z)" onclick="generateHeadToHead('name')">Name (A–Z)</a></li>
+							<li><a class="dropdown-item" data-label="Matches Played" onclick="generateHeadToHead('played')">Matches Played</a></li>
+							<li><a class="dropdown-item" data-label="Matches Won" onclick="generateHeadToHead('wins')">Matches Won</a></li>
+							<li><a class="dropdown-item" data-label="Matches Lost" onclick="generateHeadToHead('losses')">Matches Lost</a></li>
+							<li><a class="dropdown-item" data-label="Match Win Rate" onclick="generateHeadToHead('winrate')">Match Win Rate</a></li>
+							<li><a class="dropdown-item" data-label="Frames Won" onclick="generateHeadToHead('framesFor')">Frames Won</a></li>
+							<li><a class="dropdown-item" data-label="Frames Lost" onclick="generateHeadToHead('framesAgainst')">Frames Lost</a></li>
+							<li><a class="dropdown-item" data-label="Frame Win Rate" onclick="generateHeadToHead('framerate')">Frame Win Rate</a></li>
+							<li><a class="dropdown-item" data-label="Elo Gained" onclick="generateHeadToHead('eloGained')">Elo Gained</a></li>
+							<li><a class="dropdown-item" data-label="Elo Lost" onclick="generateHeadToHead('eloLost')">Elo Lost</a></li>
+							<li><a class="dropdown-item" data-label="Elo Net" onclick="generateHeadToHead('eloNet')">Elo Net</a></li>
+						</ul>
+					</div>
+
+					<script>
+						document.querySelectorAll(".dropdown-item").forEach(item => {
+							item.addEventListener("click", () => {
+								document.getElementById("h2hSortLabel").textContent = item.dataset.label;
+							});
+						});
+					</script>
+				</div>
+				<div id="h2h-opponent-list" class="row g-4"></div>
+			</div>
+		</div>
+
+		<div id="achievements" class="container-fluid tab-pane fade show" role="tabpanel"
+			aria-labelledby="achievements-tab" style="min-height: 100vh;">
+		</div>
+
 	</div>
-	
-</div>
+
 </body>
+
 </html>
