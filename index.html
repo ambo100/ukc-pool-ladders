@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
-
 <head>
 	<meta charset="utf-8">
 	<meta name="google" content="notranslate">
 	<meta http-equiv="Content-Language" content="en">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>UKC Pool/Snooker Ladders</title>
+
 	<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZPN6MN3SHQ"></script>
 	<script>
 		window.dataLayer = window.dataLayer || [];
@@ -29,18 +29,33 @@
 		const accessToken = "AIzaSyBzx9C98J2--o4tZgymHKYSM5DnOgcte8o";
 		const rangeMatchesPool = "Pool!X:AG";
 		const rangeMatchesSnooker = "Snooker!I:R";
-
 		const fullUrlWithoutParams = window.location.protocol + "//" + window.location.host + window.location.pathname;
 		const params = new URLSearchParams(window.location.search);
-		const playerName = params.get('name');
-		const gameType = params.get('game') == "s" ? rangeMatchesSnooker : rangeMatchesPool;
-		const sheetId = params.get('sheetId') == null ? "16MHKcccaEF5Dp_hGUSZKSK6N3NY-CcKzyeLeHTM7ZRI" : params.get('sheetId');
-		const url = "https://sheets.googleapis.com/v4/spreadsheets/" + sheetId + "/values/" + gameType + "?key=" + accessToken;
+		const playerName = params.get("name") || "";
+		const sheetId = params.get("sheetId") || "16MHKcccaEF5Dp_hGUSZKSK6N3NY-CcKzyeLeHTM7ZRI";
+
 		const reducer = (accumulator, curr) => accumulator + curr;
 
-		let results;
-		let rowCount;
+		let poolResults = null;
+		let snookerResults = null;
+		let results = null;
+		let rowCount = 0;
 		let newCell, newText, newRow;
+		let eloChart = null;
+		let playerCardDownloadUrl = "";
+		let playerCardModal = null;
+		let currentPlayerCardTheme = 0;
+
+		const playerCardThemes = [
+			{ backgroundStart: "#08131f", backgroundMid: "#0f2134", backgroundEnd: "#16324d", accent: "#9bc7ff", accentSoft: "rgba(42, 157, 143, 0.3)", glow: "rgba(244, 162, 97, 0.34)" },
+			{ backgroundStart: "#0f1c10", backgroundMid: "#17341b", backgroundEnd: "#1f4a27", accent: "#82f3a5", accentSoft: "rgba(58, 214, 122, 0.28)", glow: "rgba(82, 255, 165, 0.3)" },
+			{ backgroundStart: "#20110b", backgroundMid: "#432114", backgroundEnd: "#63331b", accent: "#ffb36b", accentSoft: "rgba(255, 153, 87, 0.28)", glow: "rgba(255, 190, 92, 0.3)" },
+			{ backgroundStart: "#1c1026", backgroundMid: "#35204f", backgroundEnd: "#4d2f78", accent: "#d3a8ff", accentSoft: "rgba(167, 109, 255, 0.28)", glow: "rgba(214, 126, 255, 0.3)" },
+			{ backgroundStart: "#101923", backgroundMid: "#1a3042", backgroundEnd: "#234b66", accent: "#8de2ff", accentSoft: "rgba(78, 191, 255, 0.28)", glow: "rgba(115, 221, 255, 0.3)" },
+			{ backgroundStart: "#221015", backgroundMid: "#4a1d2d", backgroundEnd: "#6a2b40", accent: "#ff9db0", accentSoft: "rgba(255, 103, 149, 0.28)", glow: "rgba(255, 153, 183, 0.3)" },
+			{ backgroundStart: "#18140d", backgroundMid: "#342b18", backgroundEnd: "#514223", accent: "#f2dc91", accentSoft: "rgba(212, 173, 81, 0.28)", glow: "rgba(255, 220, 122, 0.3)" },
+			{ backgroundStart: "#0e1f21", backgroundMid: "#184145", backgroundEnd: "#1f6569", accent: "#87f5ef", accentSoft: "rgba(72, 221, 205, 0.28)", glow: "rgba(104, 255, 231, 0.3)" }
+		];
 
 		let stats = {
 			matchesWon: 0,
@@ -61,18 +76,23 @@
 			eloGainsTotal: 0,
 			eloGains: [],
 			eloLosses: [],
+			currentRank: null,
+			currentElo: 1000,
+			seasonLabel: "",
 			achievements: 0,
 			opponentsWhitewashed: [],
 		};
-		let achievements = [
+
+		const achievements = [
+			{ name: "Double", type: "matches", progress: () => +(hasPlayedPool() && hasPlayedSnooker()), condition: 1, description: "Play a pool and a snooker match." },
 			{ name: "Starter", type: "matches", progress: () => stats.matchesWon + stats.matchesLost, condition: 5, description: "Play 5 matches." },
 			{ name: "Winner", type: "matches", progress: () => stats.matchesWon, condition: 1, description: "Win a match." },
 			{ name: "Match Player", type: "matches", progress: () => stats.matchesWon, condition: 10, description: "Win 10 matches." },
 			{ name: "Champion", type: "matches", progress: () => stats.matchesWon, condition: 25, description: "Win 25 matches." },
 			{ name: "Titan", type: "matches", progress: () => stats.matchesWon, condition: 50, description: "Win 50 matches." },
 
-			{ name: "Re-racker", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequest(stats.matchDates)), condition: 3, description: "Play 3 matches in a day." },
-			{ name: "Mitch Match", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequest(stats.matchDates)), condition: 5, description: "Play 5 matches in a day." },
+			{ name: "Re-racker", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequent(stats.matchDates)), condition: 3, description: "Play 3 matches in a day." },
+			{ name: "Mitch Match", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequent(stats.matchDates)), condition: 5, description: "Play 5 matches in a day." },
 			{ name: "Visitor", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 5, description: "Play on 5 different days." },
 			{ name: "Regular", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 15, description: "Play on 15 different days." },
 			{ name: "Resident", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 30, description: "Play on 30 different days." },
@@ -88,7 +108,7 @@
 			{ name: "Brawler", type: "players", progress: () => stats.playersBeaten.length, condition: 5, description: "Beat 5 different players." },
 			{ name: "Warrior", type: "players", progress: () => stats.playersBeaten.length, condition: 10, description: "Beat 10 different players." },
 			{ name: "Gladiator", type: "players", progress: () => stats.playersBeaten.length, condition: 15, description: "Beat 15 different players." },
-			{ name: "Dishwasher", type: "players", progress: () => stats.opponentsWhitewashed.length, condition: 3, description: "Whitewash 3 different opponents." },
+			{ name: "Dishwasher", type: "players", progress: () => stats.opponentsWhitewashed.length, condition: 3, description: "Whitewash 3 different players." },
 
 			{ name: "Tie Breaker", type: "special", progress: () => stats.deciderWins, condition: 1, description: "Win a match in a decider." },
 			{ name: "Decision Maker", type: "special", progress: () => stats.deciderWins, condition: 5, description: "Win 5 matches in a decider." },
@@ -102,83 +122,102 @@
 			{ name: "Collector", type: "elo", progress: () => stats.eloGainsTotal, condition: 100, description: "Take 100 Elo in total." },
 			{ name: "Harvester", type: "elo", progress: () => stats.eloGainsTotal, condition: 500, description: "Take 500 Elo in total." },
 			{ name: "Farmer", type: "elo", progress: () => stats.eloGainsTotal, condition: 1000, description: "Take 1000 Elo in total." },
-			{ name: "Pocket Change", type: "elo", progress: () => Math.min(...stats.eloGains) <= 10 ? 1 : 0, condition: 1, description: "Take 10 or less Elo from an opponent." },
-			{ name: "Underdog", type: "elo", progress: () => Math.max(...stats.eloGains) > 25 ? 1 : 0, condition: 1, description: "Take 26 or more Elo from an opponent." },
-			{ name: "Deep Screw", type: "elo", progress: () => Math.max(...stats.eloGains) >= 40 ? 1 : 0, condition: 1, description: "Take 40 or more Elo from an opponent." }
 
-			// ACHIEVEMENT IDEAS
-			// Revenger - Beat a player you previously lost against.
-			// KIlljoy - End a players win streak of five or more matches.
-			// Snookered - Play a game in the snooker league.
-
+			{ name: "Pocket Change", type: "secret", progress: () => stats.eloGains.length && Math.min(...stats.eloGains) <= 10 ? 1 : 0, condition: 1, description: "Take 10 or less Elo from an opponent." },
+			{ name: "Underdog", type: "secret", progress: () => stats.eloGains.length && Math.max(...stats.eloGains) > 25 ? 1 : 0, condition: 1, description: "Take 26 or more Elo from an opponent." },
+			{ name: "Deep Screw", type: "secret", progress: () => stats.eloGains.length && Math.max(...stats.eloGains) >= 40 ? 1 : 0, condition: 1, description: "Take 40 or more Elo from an opponent." },
 		];
 
-		window.onload = function () {
-			if (playerName.length > 16) {
-				document.getElementById("playerName").innerHTML = playerName.replace(/^(\w)\w*\s(\w+)/, "$1. $2");
-			} else {
-				document.getElementById("playerName").innerHTML = playerName;
+		document.addEventListener("DOMContentLoaded", () => {
+			const playerNameEl = document.getElementById("playerName");
+
+			if (!playerName) {
+				playerNameEl.textContent = "No player selected";
+				return;
 			}
+
+			playerNameEl.textContent = getDisplayPlayerName(playerName);
+
+			document.querySelectorAll(".dropdown-item").forEach(item => {
+				item.addEventListener("click", () => {
+					const label = document.getElementById("h2hSortLabel");
+					if (label) label.textContent = item.dataset.label || "Sort by";
+				});
+			});
 
 			getSheetData();
-		}
+		});
 
 		function getSheetData() {
-			let xmlhttp = new XMLHttpRequest();
-			xmlhttp.onreadystatechange = function () {
-				if (this.readyState == 4 && this.status == 200) {
-					results = JSON.parse(this.responseText);
-					rowCount = Object.keys(results.values).length;
-					displayResults();
-				}
-			}
+			const urlPool = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${rangeMatchesPool}?key=${accessToken}`;
+			const urlSnooker = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${rangeMatchesSnooker}?key=${accessToken}`;
 
-			xmlhttp.open("GET", url, true);
-			xmlhttp.send();
+			Promise.all([
+				fetch(urlPool).then(r => r.json()),
+				fetch(urlSnooker).then(r => r.json())
+			])
+				.then(([poolData, snookerData]) => {
+					poolResults = poolData;
+					snookerResults = snookerData;
+
+					results = params.get("game") === "s" ? snookerResults : poolResults;
+
+					if (!results || !Array.isArray(results.values)) {
+						console.error("No sheet data returned.");
+						return;
+					}
+
+					rowCount = results.values.length;
+					displayResults();
+				})
+				.catch(err => console.error(err));
 		}
 
 		function displayResults() {
+			if (!results || !Array.isArray(results.values)) return;
 
-			let resultsTableBody = document.getElementById("results-body");
+			const resultsTableBody = document.getElementById("results-body");
+			resultsTableBody.innerHTML = "";
 
 			for (let i = 4; i < rowCount; i++) {
-				if (results.values[i][2] == playerName || results.values[i][9] == playerName) {
+				const row = results.values[i];
+				if (!row) continue;
+
+				if (row[2] === playerName || row[9] === playerName) {
 					newRow = resultsTableBody.insertRow(0);
 
 					addNewCell(resultsTableBody.rows.length);
 
-					//Format as Date as shorthand 			
-					let matchDate = results.values[i][0].replace(/(\d+\/\d+\/)\d{2}(\d+)/, "$1$2"); 	//Date
+					const matchDate = (row[0] || "").replace(/(\d+\/\d+\/)\d{2}(\d+)/, "$1$2");
 					addNewCell(matchDate);
 					stats.matchDates.push(matchDate);
 
-					//Format rows depending on win/loss
-					if (results.values[i][2] == playerName) {
+					if (row[2] === playerName) {
 						newRow.classList.add("table-success");
-						addNewCell(results.values[i][9], true);					//Opponent name
-						addNewCell(results.values[i][4]);						//ELO Difference
-						addNewCell(results.values[i][5], false, true);			//Match Score
+						addNewCell(row[9] || "", true);
+						addNewCell(row[4] || "");
+						addNewCell(row[5] || "", false, true);
 
-						//Stats
-						stats.uniquePlayers.push(results.values[i][9]);
-						stats.playersBeaten.push(results.values[i][9]);
-						let eloGain = parseInt(results.values[i][4].substring(2));
-						stats.eloHistory.push(+stats.eloHistory[stats.eloHistory.length - 1] + +eloGain);
+						stats.uniquePlayers.push(row[9]);
+						stats.playersBeaten.push(row[9]);
+
+						const eloGain = parseInt((row[4] || "").substring(2), 10) || 0;
+						stats.eloHistory.push(stats.eloHistory[stats.eloHistory.length - 1] + eloGain);
 						stats.eloGains.push(eloGain);
-
 						stats.winStreakCurrent++;
 
-						if (stats.winStreakCurrent > stats.winStreakBest)
+						if (stats.winStreakCurrent > stats.winStreakBest) {
 							stats.winStreakBest = stats.winStreakCurrent;
+						}
 
-						let playerScore = parseInt(results.values[i][5].replace(/(\d+).+(\d+)/, "$1"));
-						let opponentScore = parseInt(results.values[i][5].replace(/\d+.+(\d+)/, "$1"));
+						const playerScore = parseInt((row[5] || "").replace(/(\d+).+(\d+)/, "$1"), 10) || 0;
+						const opponentScore = parseInt((row[5] || "").replace(/\d+.+(\d+)/, "$1"), 10) || 0;
 
-						if (opponentScore == 0) {
+						if (opponentScore === 0) {
 							stats.whitewashWins++;
 							stats.whiteWashConsecutiveWins++;
 
-							const opponentName = results.values[i][9];
+							const opponentName = row[9];
 							if (opponentName && !stats.opponentsWhitewashed.includes(opponentName)) {
 								stats.opponentsWhitewashed.push(opponentName);
 							}
@@ -186,37 +225,32 @@
 							if (stats.whiteWashConsecutiveWins > stats.whiteWashConsecutiveMax) {
 								stats.whiteWashConsecutiveMax = stats.whiteWashConsecutiveWins;
 							}
-						}
-						else {
+						} else {
 							stats.whiteWashConsecutiveWins = 0;
 						}
 
-						if (opponentScore == playerScore - 1) {
+						if (opponentScore === playerScore - 1) {
 							stats.deciderWins++;
 						}
 
 						stats.matchesWon++;
-
 						stats.framesWon += playerScore;
 						stats.framesLost += opponentScore;
-
-					}
-					else {
+					} else {
 						newRow.classList.add("table-danger");
-						addNewCell(results.values[i][2], true);												//Opponent name
-						addNewCell(results.values[i][7]);													//ELO Difference
-						addNewCell(results.values[i][5].replace(/(\d+).+(\d+)/, "$2-$1"), false, false);		//Match Score (Reversed)
+						addNewCell(row[2] || "", true);
+						addNewCell(row[7] || "");
+						addNewCell((row[5] || "").replace(/(\d+).+(\d+)/, "$2-$1"), false, false);
 
-						//Stats
-						stats.uniquePlayers.push(results.values[i][2]);
-						let eloLoss = parseInt(results.values[i][4].substring(2));
-						stats.eloHistory.push(+stats.eloHistory[stats.eloHistory.length - 1] - +eloLoss);
+						stats.uniquePlayers.push(row[2]);
+
+						const eloLoss = parseInt((row[4] || "").substring(2), 10) || 0;
+						stats.eloHistory.push(stats.eloHistory[stats.eloHistory.length - 1] - eloLoss);
 						stats.eloLosses.push(eloLoss);
-
 						stats.matchesLost++;
 
-						let playerScore = parseInt(results.values[i][5].replace(/\d+.+(\d+)/, "$1"));
-						let opponentScore = parseInt(results.values[i][5].replace(/(\d+).+(\d+)/, "$1"));
+						const playerScore = parseInt((row[5] || "").replace(/\d+.+(\d+)/, "$1"), 10) || 0;
+						const opponentScore = parseInt((row[5] || "").replace(/(\d+).+(\d+)/, "$1"), 10) || 0;
 
 						stats.framesWon += playerScore;
 						stats.framesLost += opponentScore;
@@ -228,135 +262,524 @@
 				}
 			}
 
-			//Reduce data
-			stats.uniquePlayers = [...new Set(stats.uniquePlayers)];
-			stats.playersBeaten = [...new Set(stats.playersBeaten)];
-			stats.eloGainsTotal = stats.eloGains.reduce(reducer, 0);
+			stats.uniquePlayers = [...new Set(stats.uniquePlayers.filter(Boolean))];
+			stats.playersBeaten = [...new Set(stats.playersBeaten.filter(Boolean))];
+			stats.eloGainsTotal = stats.eloGains.length ? stats.eloGains.reduce(reducer, 0) : 0;
+			stats.seasonLabel = getSeasonLabelFromResults();
+			updateCurrentRank();
 
 			calculateAchievements();
 			calculateStats();
-
 			generateHeadToHead();
-
+			renderEloChart();
 			x(stats);
 		}
 
-		function addNewCell(text, isLink, winState) {
+		function addNewCell(text, isLink = false, winState) {
 			newCell = newRow.insertCell();
 
 			if (isLink) {
-				let anchor = document.createElement("a");
-				anchor.innerHTML = arguments[0];
-				anchor.setAttribute("href", fullUrlWithoutParams + "?sheetId=" + sheetId + "&game=" + params.get('game') + "&name=" + arguments[0]);
-				anchor.setAttribute("class", "text-decoration-none");
-
+				const anchor = document.createElement("a");
+				anchor.textContent = text;
+				anchor.href = `${fullUrlWithoutParams}?sheetId=${sheetId}&game=${params.get("game") || ""}&name=${encodeURIComponent(text)}`;
+				anchor.className = "text-decoration-none";
 				newCell.appendChild(anchor);
-			}
-			else {
-				newText = document.createTextNode(arguments[0]);
+			} else {
+				newText = document.createTextNode(text);
 				newCell.appendChild(newText);
 
-				if (winState == true) {
-					newCell.classList.add("cell-win");
-				}
-				if (winState == false) {
-					newCell.classList.add("cell-lose");
-				}
+				if (winState === true) newCell.classList.add("cell-win");
+				if (winState === false) newCell.classList.add("cell-lose");
 			}
 		}
 
 		function calculateStats() {
+			const visibleAchievements = achievements.filter(({ type }) => type !== "secret").length;
+			const totalMatches = stats.matchesWon + stats.matchesLost;
+			const totalFrames = stats.framesWon + stats.framesLost;
+
 			addStat("matchesWon", stats.matchesWon);
 			addStat("matchesLost", stats.matchesLost);
-			addStat("matchWinRate", +(stats.matchesWon / (stats.matchesWon + stats.matchesLost) * 100).toFixed(1).toString() + "%");
+			addStat("matchWinRate", totalMatches ? ((stats.matchesWon / totalMatches) * 100).toFixed(1) + "%" : "0.0%");
 			addStat("framesWon", stats.framesWon);
 			addStat("framesLost", stats.framesLost);
-			addStat("frameWinRate", +(stats.framesWon / (stats.framesWon + stats.framesLost) * 100).toFixed(1).toString() + "%");
+			addStat("frameWinRate", totalFrames ? ((stats.framesWon / totalFrames) * 100).toFixed(1) + "%" : "0.0%");
 			addStat("winStreakCurrent", stats.winStreakCurrent);
 			addStat("winStreakBest", stats.winStreakBest);
 			addStat("opponents", stats.uniquePlayers.length);
 			addStat("whitewashWins", stats.whitewashWins);
 			addStat("deciderWins", stats.deciderWins);
-			// addStat("eloGain", ( stats.eloGainsTotal));
-			// addStat("averageEloLoss", ( calculateAverage(stats.eloLosses).toFixed(0) ));
-			// addStat("riskRate", ( calculateAverage(stats.eloGains).toFixed(0) ));
-
-			addStat("achievements", stats.achievements + "/" + achievements.length);
-			eloChart.update();
+			addStat("achievements", stats.achievements + "/" + visibleAchievements);
+			renderPlayerStatsCard(totalMatches, totalFrames, visibleAchievements);
 		}
 
 		function calculateAchievements() {
 			const achievementsContainer = document.getElementById("achievements");
+			achievementsContainer.innerHTML = "";
+			stats.achievements = 0;
 
-			let lastType = '';
+			let lastType = "";
 
 			achievements.forEach(({ name, type, progress, condition, description }) => {
 				const progressValue = progress();
 				const achievementProgress = Math.min(progressValue, condition);
+				const isUnlocked = progressValue >= condition;
+
+				if (type === "secret" && !isUnlocked) return;
 
 				if (lastType !== type) {
-					if (lastType !== '') {
-						achievementsContainer.innerHTML += '<br>';
+					if (lastType !== "") achievementsContainer.innerHTML += "<br>";
+					const heading = getHeadingForType(type);
+					if (heading) {
+						achievementsContainer.innerHTML += `<h3 class="achievement-heading">${heading}</h3>`;
 					}
 					lastType = type;
 				}
 
 				const achievementHTML = `
-            <div class="col-md-4 list-group-item achievement achievement-${type} ${progressValue >= condition ? '' : 'achievement-locked'}">
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">${name}</h5>
-                    <small>${achievementProgress}/${condition}</small>
-                </div>
-                <p class="mb-1">${description}</p>
-            </div>
-        `;
+					<div class="col-md-4 list-group-item achievement achievement-${type} ${isUnlocked ? "" : "achievement-locked"}">
+						<div class="d-flex w-100 justify-content-between">
+							<h5 class="mb-1">${name}</h5>
+							<small>${achievementProgress}/${condition}</small>
+						</div>
+						<p class="mb-1">${description}</p>
+					</div>
+				`;
 
 				achievementsContainer.innerHTML += achievementHTML;
 
-				if (progressValue >= condition) {
+				if (isUnlocked && type !== "secret") {
 					stats.achievements++;
 				}
 			});
 		}
 
-		function addStat(statId, statText) {
-			document.getElementById("stat-" + statId).innerHTML = statText;
+		function getHeadingForType(type) {
+			switch (type) {
+				case "secret": return "Secret Achievements";
+				default: return "";
+			}
 		}
 
-		function findMostFrequest(array) {
-			let compare = "";
+		function addStat(statId, statText) {
+			const el = document.getElementById("stat-" + statId);
+			if (el) el.textContent = statText;
+		}
+
+		function getCurrentGameLabel() {
+			return params.get("game") === "s" ? "Snooker" : "Pool";
+		}
+
+		function parseSheetDate(value) {
+			const raw = String(value || "").trim();
+			const parts = raw.split("/");
+			if (parts.length !== 3) return null;
+
+			const day = parseInt(parts[0], 10);
+			const month = parseInt(parts[1], 10);
+			let year = parseInt(parts[2], 10);
+
+			if (!day || !month || !year) return null;
+			if (year < 100) year += year >= 70 ? 1900 : 2000;
+
+			const date = new Date(year, month - 1, day);
+			return Number.isNaN(date.getTime()) ? null : date;
+		}
+
+		function getSeasonLabelFromResults() {
+			if (!results || !Array.isArray(results.values)) return "";
+
+			let earliestDate = null;
+
+			for (let i = 4; i < rowCount; i++) {
+				const row = results.values[i];
+				if (!row || !row[0]) continue;
+
+				const parsedDate = parseSheetDate(row[0]);
+				if (!parsedDate) continue;
+
+				if (!earliestDate || parsedDate < earliestDate) {
+					earliestDate = parsedDate;
+				}
+			}
+
+			if (!earliestDate) return "";
+
+			const startYear = earliestDate.getFullYear();
+			const endYear = startYear + 1;
+			return `${String(startYear).slice(-2)}/${String(endYear).slice(-2)}`;
+		}
+
+		function getDisplayPlayerName(name) {
+			if (!name) return "";
+
+			return name.length > 16
+				? name.replace(/^(\w)\w*\s(\w+)/, "$1. $2")
+				: name;
+		}
+
+		function applyPlayerCardTheme(themeIndex) {
+			const card = document.getElementById("player-stats-card");
+			const theme = playerCardThemes[themeIndex];
+			if (!card || !theme) return;
+
+			currentPlayerCardTheme = themeIndex;
+			card.style.setProperty("--player-card-bg-start", theme.backgroundStart);
+			card.style.setProperty("--player-card-bg-mid", theme.backgroundMid);
+			card.style.setProperty("--player-card-bg-end", theme.backgroundEnd);
+			card.style.setProperty("--player-card-accent", theme.accent);
+			card.style.setProperty("--player-card-accent-soft", theme.accentSoft);
+			card.style.setProperty("--player-card-glow", theme.glow);
+		}
+
+		function cyclePlayerCardTheme() {
+			applyPlayerCardTheme((currentPlayerCardTheme + 1) % playerCardThemes.length);
+		}
+
+		function renderPlayerStatsCard(totalMatches, totalFrames, visibleAchievements) {
+			const card = document.getElementById("player-stats-card");
+			const rank = document.getElementById("player-card-rank");
+			const subtitle = document.getElementById("player-card-subtitle");
+			const headline = document.getElementById("player-card-headline");
+			const summary = document.getElementById("player-card-summary");
+			const metrics = document.getElementById("player-card-metrics");
+			const footer = document.getElementById("player-card-footer");
+			const button = document.getElementById("download-stats-card");
+			const confirmButton = document.getElementById("confirm-download-stats-card");
+
+			if (!card || !rank || !subtitle || !headline || !summary || !metrics || !footer || !button || !confirmButton) return;
+
+			const matchWinRate = totalMatches ? ((stats.matchesWon / totalMatches) * 100).toFixed(1) + "%" : "0.0%";
+			const frameWinRate = totalFrames ? ((stats.framesWon / totalFrames) * 100).toFixed(1) + "%" : "0.0%";
+			const achievementRate = visibleAchievements ? Math.round((stats.achievements / visibleAchievements) * 100) + "%" : "0%";
+			const playerDisplayName = playerName || "Unknown Player";
+			const gameLabel = getCurrentGameLabel();
+
+			rank.textContent = stats.currentRank ? `#${stats.currentRank}` : "-";
+			subtitle.textContent = stats.seasonLabel
+				? `UKC ${gameLabel.toUpperCase()} LADDERS ${stats.seasonLabel}`
+				: `UKC ${gameLabel.toUpperCase()} LADDERS`;
+			headline.textContent = getDisplayPlayerName(playerDisplayName);
+			summary.textContent = "";
+
+			metrics.innerHTML = `
+				<div class="player-card-metric">
+					<span class="player-card-metric-label">Match Win Rate</span>
+					<span class="player-card-metric-value">${matchWinRate}</span>
+				</div>
+				<div class="player-card-metric">
+					<span class="player-card-metric-label">Frame Win Rate</span>
+					<span class="player-card-metric-value">${frameWinRate}</span>
+				</div>
+				<div class="player-card-metric">
+					<span class="player-card-metric-label">Matches Won</span>
+					<span class="player-card-metric-value">${stats.matchesWon}</span>
+				</div>
+				<div class="player-card-metric">
+					<span class="player-card-metric-label">Frames Won</span>
+					<span class="player-card-metric-value">${stats.framesWon}</span>
+				</div>
+				<div class="player-card-metric">
+					<span class="player-card-metric-label">Opponents</span>
+					<span class="player-card-metric-value">${stats.uniquePlayers.length}</span>
+				</div>
+				<div class="player-card-metric">
+					<span class="player-card-metric-label">Total Elo Taken</span>
+					<span class="player-card-metric-value">${stats.eloGainsTotal}</span>
+				</div>
+			`;
+
+			footer.textContent = "instagram.com/ukcsnookerandpool";
+			button.disabled = !totalMatches;
+			button.setAttribute("aria-disabled", String(!totalMatches));
+			confirmButton.disabled = !totalMatches;
+		}
+
+		function getPlayerCardExportStyles() {
+			return `
+				.player-stats-card {
+					position: relative;
+					width: 1080px;
+					height: 1350px;
+					overflow: hidden;
+					background:
+						radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 36%),
+						radial-gradient(circle at bottom right, var(--player-card-accent-soft, rgba(42, 157, 143, 0.3)), transparent 30%),
+						linear-gradient(145deg, var(--player-card-bg-start, #08131f) 0%, var(--player-card-bg-mid, #0f2134) 52%, var(--player-card-bg-end, #16324d) 100%);
+					border: 1px solid rgba(255,255,255,0.12);
+					border-radius: 32px;
+					color: #f4f7fb;
+					font-family: Roboto, Arial, sans-serif;
+					box-sizing: border-box;
+				}
+				.player-card-glow {
+					position: absolute;
+					inset: auto auto -140px -80px;
+					width: 460px;
+					height: 460px;
+					background: radial-gradient(circle, var(--player-card-glow, rgba(244, 162, 97, 0.34)), transparent 70%);
+				}
+				.player-card-inner {
+					position: relative;
+					z-index: 1;
+					display: flex;
+					flex-direction: column;
+					height: 100%;
+					padding: 88px 76px 72px;
+					box-sizing: border-box;
+				}
+				.player-card-header {
+					display: flex;
+					justify-content: space-between;
+					align-items: flex-start;
+					gap: 24px;
+					margin-bottom: 22px;
+				}
+				.player-card-rank {
+					padding: 0;
+					font-size: 58px;
+					line-height: 0.95;
+					font-weight: 700;
+					letter-spacing: -1px;
+					color: rgba(244,247,251,0.92);
+					white-space: nowrap;
+					flex-shrink: 0;
+					font-family: Roboto, Arial, sans-serif;
+				}
+				.player-card-kicker {
+					color: var(--player-card-accent, #9bc7ff);
+					font-size: 30px;
+					font-weight: 700;
+					letter-spacing: 4px;
+					text-transform: uppercase;
+					margin: 0;
+					max-width: 680px;
+				}
+				.player-card-name {
+					font-size: 66px;
+					line-height: 0.95;
+					font-weight: 700;
+					margin: 0 0 28px;
+					max-width: 760px;
+				}
+				.player-card-summary {
+					max-width: 760px;
+					font-size: 30px;
+					line-height: 1.4;
+					color: rgba(244,247,251,0.82);
+					margin: 0 0 54px;
+				}
+				.player-card-metrics {
+					display: grid;
+					grid-template-columns: repeat(2, minmax(0, 1fr));
+					gap: 24px;
+					margin-top: auto;
+				}
+				.player-card-metric {
+					background: rgba(7, 19, 31, 0.6);
+					border: 1px solid rgba(255,255,255,0.1);
+					border-radius: 24px;
+					padding: 28px 30px;
+					box-sizing: border-box;
+				}
+				.player-card-metric-label {
+					display: block;
+					font-size: 24px;
+					font-weight: 500;
+					color: #a8bfd8;
+					margin-bottom: 12px;
+				}
+				.player-card-metric-value {
+					display: block;
+					font-size: 48px;
+					font-weight: 700;
+					color: #ffffff;
+				}
+				.player-card-footer {
+					margin-top: 30px;
+					font-size: 24px;
+					color: rgba(244,247,251,0.68);
+					letter-spacing: 1px;
+					text-align: center;
+				}
+			`;
+		}
+
+		function cleanupPlayerCardDownloadUrl() {
+			if (playerCardDownloadUrl) {
+				URL.revokeObjectURL(playerCardDownloadUrl);
+				playerCardDownloadUrl = "";
+			}
+		}
+
+		function parseEloDelta(value) {
+			const match = String(value || "").match(/[-+]?\s*\d+/);
+			return match ? Math.abs(parseInt(match[0].replace(/\s+/g, ""), 10)) : 0;
+		}
+
+		function updateCurrentRank() {
+			if (!results || !Array.isArray(results.values)) return;
+
+			const ladder = {};
+
+			for (let i = 4; i < rowCount; i++) {
+				const row = results.values[i];
+				if (!row) continue;
+
+				const winner = row[2];
+				const loser = row[9];
+				if (!winner || !loser) continue;
+
+				const winnerGain = parseEloDelta(row[4]);
+				const loserLoss = parseEloDelta(row[7]) || winnerGain;
+
+				if (ladder[winner] === undefined) ladder[winner] = 1000;
+				if (ladder[loser] === undefined) ladder[loser] = 1000;
+
+				ladder[winner] += winnerGain;
+				ladder[loser] -= loserLoss;
+			}
+
+			const ranking = Object.entries(ladder)
+				.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+			const playerIndex = ranking.findIndex(([name]) => name === playerName);
+			if (playerIndex === -1) {
+				stats.currentRank = null;
+				stats.currentElo = 1000;
+				return;
+			}
+
+			stats.currentRank = playerIndex + 1;
+			stats.currentElo = ranking[playerIndex][1];
+		}
+
+		function openPlayerStatsPreview() {
+			const button = document.getElementById("download-stats-card");
+			const modalEl = document.getElementById("playerCardModal");
+			if (!button || button.disabled || !modalEl) return;
+
+			if (!playerCardModal) {
+				playerCardModal = new bootstrap.Modal(modalEl);
+			}
+
+			applyPlayerCardTheme(Math.floor(Math.random() * playerCardThemes.length));
+			playerCardModal.show();
+		}
+
+		function downloadPlayerStatsCard() {
+			const card = document.getElementById("player-stats-card");
+			const button = document.getElementById("confirm-download-stats-card");
+			if (!card || !button || button.disabled) return;
+
+			button.disabled = true;
+			button.textContent = "Generating...";
+			cleanupPlayerCardDownloadUrl();
+
+			const width = 1080;
+			const height = 1350;
+			const serializer = new XMLSerializer();
+			const clone = card.cloneNode(true);
+			clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+
+			const markup = serializer.serializeToString(clone);
+			const styles = getPlayerCardExportStyles();
+			const svg = `
+				<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+					<style>${styles}</style>
+					<foreignObject width="100%" height="100%">
+						${markup}
+					</foreignObject>
+				</svg>
+			`;
+
+			const image = new Image();
+			image.onload = () => {
+				const canvas = document.createElement("canvas");
+				canvas.width = width;
+				canvas.height = height;
+
+				const ctx = canvas.getContext("2d");
+				if (!ctx) {
+					button.disabled = false;
+					button.textContent = "Download image";
+					return;
+				}
+
+				ctx.drawImage(image, 0, 0, width, height);
+				canvas.toBlob(blob => {
+					button.disabled = false;
+					button.textContent = "Download image";
+					if (!blob) return;
+
+					playerCardDownloadUrl = URL.createObjectURL(blob);
+					const link = document.createElement("a");
+					link.href = playerCardDownloadUrl;
+					link.download = `${playerName || "player"}-${getCurrentGameLabel().toLowerCase()}-stats-card.png`
+						.replace(/\s+/g, "-")
+						.toLowerCase();
+					document.body.appendChild(link);
+					link.click();
+					link.remove();
+				}, "image/png");
+			};
+
+			image.onerror = () => {
+				button.disabled = false;
+				button.textContent = "Download image";
+			};
+
+			image.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+		}
+
+		function findMostFrequent(array) {
+			let compare = 0;
 			let mostFreq = "";
 
 			array.reduce((acc, val) => {
-				if (val in acc) {               // if key already exists
-					acc[val]++;                // then increment it by 1
-				} else {
-					acc[val] = 1;      // or else create a key with value 1
-				}
-				if (acc[val] > compare) {   // if value of that key is greater
-					// than the compare value.
-					compare = acc[val];    // than make it a new compare value.
-					mostFreq = val;        // also make that key most frequent.
+				acc[val] = (acc[val] || 0) + 1;
+
+				if (acc[val] > compare) {
+					compare = acc[val];
+					mostFreq = val;
 				}
 				return acc;
-			}, {})
+			}, {});
 
 			return mostFreq;
 		}
 
 		function getOccurrence(array, value) {
-			var count = 0;
-			array.forEach((v) => (v === value && count++));
+			let count = 0;
+			array.forEach(v => { if (v === value) count++; });
 			return count;
 		}
 
 		function calculateAverage(array) {
-			if (array.length === 0) return 0;
+			if (!array.length) return 0;
 			const sum = array.reduce((acc, value) => acc + value, 0);
 			return sum / array.length;
 		}
 
-		function generateHeadToHead(sortBy = "name") {
+		function hasPlayedSnooker() {
+			return !!(
+				playerName &&
+				snookerResults &&
+				Array.isArray(snookerResults.values) &&
+				snookerResults.values.some(r => r && (r[2] === playerName || r[9] === playerName))
+			);
+		}
+
+		function hasPlayedPool() {
+			return !!(
+				playerName &&
+				poolResults &&
+				Array.isArray(poolResults.values) &&
+				poolResults.values.some(r => r && (r[2] === playerName || r[9] === playerName))
+			);
+		}
+
+		function generateHeadToHead(sortBy = "played") {
 			if (!results || !rowCount) return;
 
 			const tally = {};
@@ -371,6 +794,7 @@
 				if (p1 !== playerName && p2 !== playerName) continue;
 
 				const opponent = (p1 === playerName ? p2 : p1);
+				if (!opponent) continue;
 
 				if (!tally[opponent]) {
 					tally[opponent] = {
@@ -387,11 +811,10 @@
 				const m = score.match(/(\d+)\D+(\d+)/);
 				if (!m) continue;
 
-				let p1s = parseInt(m[1], 10);
-				let p2s = parseInt(m[2], 10);
-
+				const p1s = parseInt(m[1], 10) || 0;
+				const p2s = parseInt(m[2], 10) || 0;
 				const rawElo = row[4] || "";
-				const eloAmount = parseInt(rawElo.substring(2));
+				const eloAmount = parseInt(rawElo.substring(2), 10) || 0;
 
 				if (p1 === playerName) {
 					tally[opponent].wins++;
@@ -422,7 +845,7 @@
 
 			opponents.sort((a, b) => {
 				switch (sortBy) {
-					case "played": return b.wins + b.losses;
+					case "played": return (b.wins + b.losses) - (a.wins + a.losses);
 					case "wins": return b.wins - a.wins;
 					case "losses": return b.losses - a.losses;
 					case "winrate": return b.matchWinRate - a.matchWinRate;
@@ -449,104 +872,131 @@
 			opponents.forEach(op => {
 				const col = document.createElement("div");
 				col.className = "col-lg-3 col-md-4 col-sm-6";
-
 				col.innerHTML = `
 					<div class="h2h-card">
 						<div class="h2h-name">${op.name}</div>
-
 						<div class="h2h-stat-group">
-
 							<div class="h2h-stat-item">
 								<div class="h2h-stat-title">Matches Won</div>
 								<div class="h2h-stat-value">${op.wins}</div>
 							</div>
-
 							<div class="h2h-stat-item">
 								<div class="h2h-stat-title">Matches Lost</div>
 								<div class="h2h-stat-value">${op.losses}</div>
 							</div>
-
 							<div class="h2h-stat-item">
 								<div class="h2h-stat-title">Match Win Rate</div>
 								<div class="h2h-stat-value">${(op.matchWinRate * 100).toFixed(1)}%</div>
 							</div>
-
 							<div class="h2h-stat-item">
 								<div class="h2h-stat-title">Frames Won</div>
 								<div class="h2h-stat-value">${op.framesFor}</div>
 							</div>
-
 							<div class="h2h-stat-item">
 								<div class="h2h-stat-title">Frames Lost</div>
 								<div class="h2h-stat-value">${op.framesAgainst}</div>
 							</div>
-
 							<div class="h2h-stat-item">
 								<div class="h2h-stat-title">Frame Win Rate</div>
 								<div class="h2h-stat-value">${(op.frameWinRate * 100).toFixed(1)}%</div>
 							</div>
-
 							<div class="h2h-stat-item">
 								<div class="h2h-stat-title">Elo Gained</div>
 								<div class="h2h-stat-value">${op.eloGained}</div>
 							</div>
-
 							<div class="h2h-stat-item">
 								<div class="h2h-stat-title">Elo Lost</div>
 								<div class="h2h-stat-value">${op.eloLost}</div>
 							</div>
-
 							<div class="h2h-stat-item">
 								<div class="h2h-stat-title">Elo Net</div>
 								<div class="h2h-stat-value">${op.eloNet}</div>
 							</div>
-
 						</div>
 					</div>
 				`;
-
 				container.appendChild(col);
+			});
+		}
+
+		function renderEloChart() {
+			const canvas = document.getElementById("elo-chart");
+			if (!canvas) return;
+
+			if (eloChart) {
+				eloChart.destroy();
+			}
+
+			eloChart = new Chart(canvas, {
+				type: "line",
+				data: {
+					labels: stats.matchCount,
+					datasets: [{
+						data: stats.eloHistory,
+						backgroundColor: "#ffffff",
+						borderColor: "#ADBCCC",
+						color: "#ffffff",
+						lineTension: 0
+					}]
+				},
+				options: {
+					maintainAspectRatio: false,
+					plugins: {
+						legend: { display: false }
+					},
+					scales: {
+						y: {
+							grid: {
+								color: "rgba(255,255,255,0.12)"
+							}
+						}
+					}
+				}
 			});
 		}
 
 		function x(str = "DEBUG") {
 			console.log(str);
 		}
-
 	</script>
 </head>
 
 <body>
-
 	<ul class="nav nav-tabs" id="myTab" role="tablist" style="font-size: large;">
 		<li class="nav-item">
 			<a class="nav-link disabled" id="playerName" tabindex="-1" aria-disabled="true"></a>
 		</li>
 		<li class="nav-item" role="presentation">
 			<button class="nav-link active" id="matches-tab" data-bs-toggle="tab" data-bs-target="#matches"
-				type="button" role="tab" aria-controls="matches" aria-selected="true"><i class="bi bi-table nav-icon"
-					style="color: green;"></i> <span class="nav-text">Matches</span></button>
+				type="button" role="tab" aria-controls="matches" aria-selected="true">
+				<i class="bi bi-table nav-icon" style="color: green;"></i>
+				<span class="nav-text">Matches</span>
+			</button>
 		</li>
-		<li class="nav-item " role="presentation">
+		<li class="nav-item" role="presentation">
 			<button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button"
-				role="tab" aria-controls="stats" aria-selected="false"><i class="bi bi-graph-up nav-icon"
-					style="color: blue;"></i> <span class="nav-text">Stats</span></button>
+				role="tab" aria-controls="stats" aria-selected="false">
+				<i class="bi bi-graph-up nav-icon" style="color: blue;"></i>
+				<span class="nav-text">Stats</span>
+			</button>
 		</li>
 		<li class="nav-item" role="presentation">
 			<button class="nav-link" id="head-to-head-tab" data-bs-toggle="tab" data-bs-target="#head-to-head"
-				type="button" role="tab" aria-controls="live" aria-selected="false"><i class="bi bi-people nav-icon"
-					style="color: red;"></i> <span class="nav-text">Head-to-head</span></button>
+				type="button" role="tab" aria-controls="live" aria-selected="false">
+				<i class="bi bi-people nav-icon" style="color: red;"></i>
+				<span class="nav-text">Head-to-head</span>
+			</button>
 		</li>
 		<li class="nav-item" role="presentation">
 			<button class="nav-link" id="achievements-tab" data-bs-toggle="tab" data-bs-target="#achievements"
-				type="button" role="tab" aria-controls="achievements" aria-selected="false"><i
-					class="bi bi-trophy nav-icon" style="color: darkorange;"></i> <span
-					class="nav-text">Achievements</span></button>
+				type="button" role="tab" aria-controls="achievements" aria-selected="false">
+				<i class="bi bi-trophy nav-icon" style="color: darkorange;"></i>
+				<span class="nav-text">Achievements</span>
+			</button>
 		</li>
 	</ul>
 
 	<div class="tab-content" id="tabContent">
-
 		<div id="matches" class="table-responsive tab-pane fade show active" role="tabpanel"
 			aria-labelledby="matches-tab" style="min-height: 100vh;">
 			<table class="table table-dark table-striped table-bordered sortable" id="results">
@@ -556,143 +1006,92 @@
 						<th scope="col" class="sorttable_nosort">Date</th>
 						<th scope="col" class="text-truncate">Opponent</th>
 						<th scope="col" class="sorttable_numeric">Elo</th>
-						<th scope="col" class="">Score</th>
+						<th scope="col">Score</th>
 					</tr>
 				</thead>
-				<tbody id="results-body">
-				</tbody>
+				<tbody id="results-body"></tbody>
 			</table>
 		</div>
 
 		<div id="stats" class="container-fluid tab-pane fade show" role="tabpanel" aria-labelledby="stats-tab"
 			style="min-height: 100vh;">
 			<div class="stat-container">
-
 				<div class="stat-item">
 					<span class="stat-title">Matches Won</span>
 					<span class="stat-value" id="stat-matchesWon">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Matches Lost</span>
 					<span class="stat-value" id="stat-matchesLost">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Match Win Rate</span>
 					<span class="stat-value" id="stat-matchWinRate">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Frames Won</span>
 					<span class="stat-value" id="stat-framesWon">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Frames Lost</span>
 					<span class="stat-value" id="stat-framesLost">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Frame Win Rate</span>
 					<span class="stat-value" id="stat-frameWinRate">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Whitewash Wins</span>
 					<span class="stat-value" id="stat-whitewashWins">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Decider Wins</span>
 					<span class="stat-value" id="stat-deciderWins">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Opponents</span>
 					<span class="stat-value" id="stat-opponents">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Current Streak</span>
 					<span class="stat-value" id="stat-winStreakCurrent">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Best Streak</span>
 					<span class="stat-value" id="stat-winStreakBest">-</span>
 				</div>
-
 				<div class="stat-item">
 					<span class="stat-title">Achievements</span>
 					<span class="stat-value" id="stat-achievements"></span>
 				</div>
-
-				<!-- <div class="stat-item" >
-				<span class="stat-title">Elo Gained</span>
-				<span class="stat-value" id="stat-eloGain"></span>
-			</div> -->
-
-				<!-- <div class="stat-item" >
-				<span class="stat-title">-</span>
-				<span class="stat-value" id="stat-averageEloLoss"></span>
-			</div>
-
-			<div class="stat-item" >
-				<span class="stat-title">-</span>
-				<span class="stat-value" id="stat-riskRate"></span>
-			</div> -->
-
 			</div>
 
 			<br>
 
 			<div class="container-fluid d-flex justify-content-center" style="max-height: 350px;">
-				<canvas id="elo-chart" style="width:100%; "></canvas>
+				<canvas id="elo-chart" style="width:100%;"></canvas>
 			</div>
 
-			<script>
-				let eloChart = new Chart("elo-chart", {
-					type: "line",
-					data: {
-						labels: stats.matchCount,
-						datasets: [
-							{
-								data: stats.eloHistory,
-								backgroundColor: "#ffffff",
-								borderColor: "#ADBCCC",
-								color: "#ffffff",
-								lineTension: 0,
-							}
-						]
-					},
-					options: {
-						maintainAspectRatio: false,
-						plugins: { legend: { display: false } },
-						scales: {
-							y: {
-								grid: {
-									color: 'rgba(255,255,255,0.12)'
-								}
-							}
-						}
-					}
-				});
-			</script>
+			<div class="share-card-section">
+				<div class="share-card-panel">
+					<button class="btn btn-secondary stats-card-button share-card-button" id="download-stats-card" type="button"
+						onclick="openPlayerStatsPreview()" disabled>
+						Download Player Card
+					</button>
+				</div>
+			</div>
 		</div>
 
 		<div id="head-to-head" class="tab-pane fade show" role="tabpanel" aria-labelledby="head-to-head-tab"
 			style="min-height: 100vh;">
-
 			<div class="container-fluid pt-3">
 				<div class="d-flex justify-content-end mb-3">
 					<div class="dropdown">
 						<button class="btn btn-secondary dropdown-toggle" type="button" id="h2hSortMenu"
 							data-bs-toggle="dropdown">
-							<span id="h2hSortLabel">Name (A–Z)</span>
+							<span id="h2hSortLabel">Sort by</span>
 						</button>
 						<ul class="dropdown-menu">
-							<li><a class="dropdown-item" data-label="Name (A–Z)" onclick="generateHeadToHead('name')">Name (A–Z)</a></li>
 							<li><a class="dropdown-item" data-label="Matches Played" onclick="generateHeadToHead('played')">Matches Played</a></li>
 							<li><a class="dropdown-item" data-label="Matches Won" onclick="generateHeadToHead('wins')">Matches Won</a></li>
 							<li><a class="dropdown-item" data-label="Matches Lost" onclick="generateHeadToHead('losses')">Matches Lost</a></li>
@@ -703,17 +1102,11 @@
 							<li><a class="dropdown-item" data-label="Elo Gained" onclick="generateHeadToHead('eloGained')">Elo Gained</a></li>
 							<li><a class="dropdown-item" data-label="Elo Lost" onclick="generateHeadToHead('eloLost')">Elo Lost</a></li>
 							<li><a class="dropdown-item" data-label="Elo Net" onclick="generateHeadToHead('eloNet')">Elo Net</a></li>
+							<li><a class="dropdown-item" data-label="Player Name" onclick="generateHeadToHead('name')">Player Name</a></li>
 						</ul>
 					</div>
-
-					<script>
-						document.querySelectorAll(".dropdown-item").forEach(item => {
-							item.addEventListener("click", () => {
-								document.getElementById("h2hSortLabel").textContent = item.dataset.label;
-							});
-						});
-					</script>
 				</div>
+
 				<div id="h2h-opponent-list" class="row g-4"></div>
 			</div>
 		</div>
@@ -721,9 +1114,45 @@
 		<div id="achievements" class="container-fluid tab-pane fade show" role="tabpanel"
 			aria-labelledby="achievements-tab" style="min-height: 100vh;">
 		</div>
-
 	</div>
 
+	<div class="modal fade" id="playerCardModal" tabindex="-1" aria-labelledby="playerCardModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-lg">
+			<div class="modal-content player-card-modal">
+				<div class="modal-header border-0">
+					<h5 class="modal-title" id="playerCardModalLabel">Player stats card preview</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body pt-0">
+					<div class="player-card-shell">
+						<div class="player-stats-card" id="player-stats-card" onclick="cyclePlayerCardTheme()" title="Tap to change card colour">
+							<div class="player-card-glow"></div>
+							<div class="player-card-inner">
+								<div class="player-card-header">
+									<div class="player-card-kicker" id="player-card-subtitle">League</div>
+									<div class="player-card-rank" id="player-card-rank">-</div>
+								</div>
+								<h3 class="player-card-name" id="player-card-headline">Player</h3>
+								<p class="player-card-summary" id="player-card-summary">No matches recorded yet.</p>
+								<div class="player-card-metrics" id="player-card-metrics">
+									<div class="player-card-metric">
+										<span class="player-card-metric-label">Match Win Rate</span>
+										<span class="player-card-metric-value">-</span>
+									</div>
+								</div>
+								<div class="player-card-footer" id="player-card-footer">Ready to share</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer border-0">
+					<button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close preview</button>
+					<button type="button" class="btn btn-secondary" id="confirm-download-stats-card" onclick="downloadPlayerStatsCard()">
+						Download
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
 </body>
-
 </html>
