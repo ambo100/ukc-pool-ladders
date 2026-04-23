@@ -120,8 +120,8 @@
 			{ name: "Untouchable", type: "special", progress: () => stats.winStreakBest, condition: 10, description: "Win 10 matches in a row." },
 
 			{ name: "Collector", type: "elo", progress: () => stats.eloGainsTotal, condition: 100, description: "Take 100 Elo in total." },
-			{ name: "Harvester", type: "elo", progress: () => stats.eloGainsTotal, condition: 500, description: "Take 500 Elo in total." },
-			{ name: "Farmer", type: "elo", progress: () => stats.eloGainsTotal, condition: 1000, description: "Take 1000 Elo in total." },
+			{ name: "Harvester", type: "elo", progress: () => stats.eloGainsTotal, condition: 250, description: "Take 250 Elo in total." },
+			{ name: "Farmer", type: "elo", progress: () => stats.eloGainsTotal, condition: 500, description: "Take 500 Elo in total." },
 
 			{ name: "Pocket Change", type: "secret", progress: () => stats.eloGains.length && Math.min(...stats.eloGains) <= 10 ? 1 : 0, condition: 1, description: "Take 10 or less Elo from an opponent." },
 			{ name: "Underdog", type: "secret", progress: () => stats.eloGains.length && Math.max(...stats.eloGains) > 25 ? 1 : 0, condition: 1, description: "Take 26 or more Elo from an opponent." },
