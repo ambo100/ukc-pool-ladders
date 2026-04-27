@@ -24,6 +24,7 @@
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
 	<script src="sorttable.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 	<script>
 		const accessToken = "AIzaSyBzx9C98J2--o4tZgymHKYSM5DnOgcte8o";
@@ -84,48 +85,48 @@
 		};
 
 		const achievements = [
-			{ name: "Double", type: "matches", progress: () => +(hasPlayedPool() && hasPlayedSnooker()), condition: 1, description: "Play a pool and a snooker match." },
-			{ name: "Starter", type: "matches", progress: () => stats.matchesWon + stats.matchesLost, condition: 5, description: "Play 5 matches." },
-			{ name: "Winner", type: "matches", progress: () => stats.matchesWon, condition: 1, description: "Win a match." },
-			{ name: "Match Player", type: "matches", progress: () => stats.matchesWon, condition: 10, description: "Win 10 matches." },
-			{ name: "Champion", type: "matches", progress: () => stats.matchesWon, condition: 25, description: "Win 25 matches." },
-			{ name: "Titan", type: "matches", progress: () => stats.matchesWon, condition: 50, description: "Win 50 matches." },
+			{ name: "Double", type: "matches", progress: () => +(hasPlayedPool() && hasPlayedSnooker()), conditionP: 1, conditionS: 1, description: "Play a pool and a snooker match." },
+			{ name: "Starter", type: "matches", progress: () => stats.matchesWon + stats.matchesLost, conditionP: 5, conditionS: 5, description: "Play {x} matches." },
+			{ name: "Winner", type: "matches", progress: () => stats.matchesWon, conditionP: 1, conditionS: 1, description: "Win a match." },
+			{ name: "Match Player", type: "matches", progress: () => stats.matchesWon, conditionP: 10, conditionS: 5, description: "Win {x} matches." },
+			{ name: "Champion", type: "matches", progress: () => stats.matchesWon, conditionP: 25, conditionS: 10, description: "Win {x} matches." },
+			{ name: "Titan", type: "matches", progress: () => stats.matchesWon, conditionP: 50, conditionS: 25, description: "Win {x} matches." },
 
-			{ name: "Re-racker", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequent(stats.matchDates)), condition: 3, description: "Play 3 matches in a day." },
-			{ name: "Mitch Match", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequent(stats.matchDates)), condition: 5, description: "Play 5 matches in a day." },
-			{ name: "Visitor", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 5, description: "Play on 5 different days." },
-			{ name: "Regular", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 15, description: "Play on 15 different days." },
-			{ name: "Resident", type: "date", progress: () => [...new Set(stats.matchDates)].length, condition: 30, description: "Play on 30 different days." },
+			{ name: "Re-racker", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequent(stats.matchDates)), conditionP: 3, conditionS: 3, description: "Play {x} matches in a day." },
+			{ name: "Mitch Match", type: "date", progress: () => getOccurrence(stats.matchDates, findMostFrequent(stats.matchDates)), conditionP: 5, conditionS: 0, description: "Play {x} matches in a day." },
+			{ name: "Visitor", type: "date", progress: () => [...new Set(stats.matchDates)].length, conditionP: 5, conditionS: 5, description: "Play on {x} different days." },
+			{ name: "Regular", type: "date", progress: () => [...new Set(stats.matchDates)].length, conditionP: 15, conditionS: 15, description: "Play on {x} different days." },
+			{ name: "Resident", type: "date", progress: () => [...new Set(stats.matchDates)].length, conditionP: 30, conditionS: 30, description: "Play on {x} different days." },
 
-			{ name: "Frame Maker", type: "frames", progress: () => stats.framesWon, condition: 50, description: "Win 50 frames." },
-			{ name: "Centurian", type: "frames", progress: () => stats.framesWon, condition: 100, description: "Win 100 frames." },
-			{ name: "Leaguer", type: "frames", progress: () => stats.framesWon, condition: 250, description: "Win 250 frames." },
-			{ name: "Full Circle", type: "frames", progress: () => stats.framesWon + stats.framesLost, condition: 360, description: "Play 360 frames." },
+			{ name: "Frame Maker", type: "frames", progress: () => stats.framesWon, conditionP: 50, conditionS: 25, description: "Win {x} frames." },
+			{ name: "Centurian", type: "frames", progress: () => stats.framesWon, conditionP: 100, conditionS: 0, description: "Win {x} frames." },
+			{ name: "Leaguer", type: "frames", progress: () => stats.framesWon, conditionP: 250, conditionS: 50, description: "Win {x} frames." },
+			{ name: "Full Circle", type: "frames", progress: () => stats.framesWon + stats.framesLost, conditionP: 360, conditionS: 0, description: "Play {x} frames." },
 
-			{ name: "Mingler", type: "players", progress: () => stats.uniquePlayers.length, condition: 5, description: "Play against 5 players." },
-			{ name: "Mixer", type: "players", progress: () => stats.uniquePlayers.length, condition: 10, description: "Play against 10 players." },
-			{ name: "Socialite", type: "players", progress: () => stats.uniquePlayers.length, condition: 15, description: "Play against 15 players." },
-			{ name: "Brawler", type: "players", progress: () => stats.playersBeaten.length, condition: 5, description: "Beat 5 different players." },
-			{ name: "Warrior", type: "players", progress: () => stats.playersBeaten.length, condition: 10, description: "Beat 10 different players." },
-			{ name: "Gladiator", type: "players", progress: () => stats.playersBeaten.length, condition: 15, description: "Beat 15 different players." },
-			{ name: "Dishwasher", type: "players", progress: () => stats.opponentsWhitewashed.length, condition: 3, description: "Whitewash 3 different players." },
+			{ name: "Mingler", type: "players", progress: () => stats.uniquePlayers.length, conditionP: 5, conditionS: 2, description: "Play against {x} players." },
+			{ name: "Mixer", type: "players", progress: () => stats.uniquePlayers.length, conditionP: 10, conditionS: 5, description: "Play against {x} players." },
+			{ name: "Socialite", type: "players", progress: () => stats.uniquePlayers.length, conditionP: 15, conditionS: 10, description: "Play against {x} players." },
+			{ name: "Brawler", type: "players", progress: () => stats.playersBeaten.length, conditionP: 5, conditionS: 2, description: "Beat {x} different players." },
+			{ name: "Warrior", type: "players", progress: () => stats.playersBeaten.length, conditionP: 10, conditionS: 5, description: "Beat {x} different players." },
+			{ name: "Gladiator", type: "players", progress: () => stats.playersBeaten.length, conditionP: 15, conditionS: 10, description: "Beat {x} different players." },
+			{ name: "Dishwasher", type: "players", progress: () => stats.opponentsWhitewashed.length, conditionP: 3, conditionS: 3, description: "Whitewash {x} different players." },
 
-			{ name: "Tie Breaker", type: "special", progress: () => stats.deciderWins, condition: 1, description: "Win a match in a decider." },
-			{ name: "Decision Maker", type: "special", progress: () => stats.deciderWins, condition: 5, description: "Win 5 matches in a decider." },
-			{ name: "Waterfall", type: "special", progress: () => stats.whitewashWins, condition: 1, description: "Win a match without losing a frame." },
-			{ name: "Dominator", type: "special", progress: () => stats.whitewashWins, condition: 5, description: "Win 5 matches without losing a frame." },
-			{ name: "The Washing Machine", type: "special", progress: () => stats.whiteWashConsecutiveMax, condition: 2, description: "Win 2 consecutive whitewashes." },
-			{ name: "Back to Back", type: "special", progress: () => stats.winStreakBest, condition: 2, description: "Win 2 matches in a row." },
-			{ name: "Streaker", type: "special", progress: () => stats.winStreakBest, condition: 5, description: "Win 5 matches in a row." },
-			{ name: "Untouchable", type: "special", progress: () => stats.winStreakBest, condition: 10, description: "Win 10 matches in a row." },
+			{ name: "Tie Breaker", type: "special", progress: () => stats.deciderWins, conditionP: 1, conditionS: 1, description: "Win a match in a decider." },
+			{ name: "Decision Maker", type: "special", progress: () => stats.deciderWins, conditionP: 5, conditionS: 10, description: "Win {x} matches in a decider." },
+			{ name: "Waterfall", type: "special", progress: () => stats.whitewashWins, conditionP: 1, conditionS: 1, description: "Win a match without losing a frame." },
+			{ name: "Dominator", type: "special", progress: () => stats.whitewashWins, conditionP: 5, conditionS: 10, description: "Win {x} matches without losing a frame." },
+			{ name: "The Washing Machine", type: "special", progress: () => stats.whiteWashConsecutiveMax, conditionP: 2, conditionS: 2, description: "Win {x} consecutive whitewashes." },
+			{ name: "Back to Back", type: "special", progress: () => stats.winStreakBest, conditionP: 2, conditionS: 2, description: "Win {x} matches in a row." },
+			{ name: "Streaker", type: "special", progress: () => stats.winStreakBest, conditionP: 5, conditionS: 5, description: "Win {x} matches in a row." },
+			{ name: "Untouchable", type: "special", progress: () => stats.winStreakBest, conditionP: 10, conditionS: 10, description: "Win {x} matches in a row." },
 
-			{ name: "Collector", type: "elo", progress: () => stats.eloGainsTotal, condition: 100, description: "Take 100 Elo in total." },
-			{ name: "Harvester", type: "elo", progress: () => stats.eloGainsTotal, condition: 250, description: "Take 250 Elo in total." },
-			{ name: "Farmer", type: "elo", progress: () => stats.eloGainsTotal, condition: 500, description: "Take 500 Elo in total." },
+			{ name: "Collector", type: "elo", progress: () => stats.eloGainsTotal, conditionP: 100, conditionS: 100, description: "Take {x} Elo in total." },
+			{ name: "Harvester", type: "elo", progress: () => stats.eloGainsTotal, conditionP: 250, conditionS: 250, description: "Take {x} Elo in total." },
+			{ name: "Farmer", type: "elo", progress: () => stats.eloGainsTotal, conditionP: 500, conditionS: 500, description: "Take {x} Elo in total." },
 
-			{ name: "Pocket Change", type: "secret", progress: () => stats.eloGains.length && Math.min(...stats.eloGains) <= 10 ? 1 : 0, condition: 1, description: "Take 10 or less Elo from an opponent." },
-			{ name: "Underdog", type: "secret", progress: () => stats.eloGains.length && Math.max(...stats.eloGains) > 25 ? 1 : 0, condition: 1, description: "Take 26 or more Elo from an opponent." },
-			{ name: "Deep Screw", type: "secret", progress: () => stats.eloGains.length && Math.max(...stats.eloGains) >= 40 ? 1 : 0, condition: 1, description: "Take 40 or more Elo from an opponent." },
+			{ name: "Pocket Change", type: "secret", progress: () => stats.eloGains.length && Math.min(...stats.eloGains) <= 10 ? 1 : 0, conditionP: 1, conditionS: 1, description: "Take 10 or less Elo from an opponent." },
+			{ name: "Underdog", type: "secret", progress: () => stats.eloGains.length && Math.max(...stats.eloGains) > 25 ? 1 : 0, conditionP: 1, conditionS: 1, description: "Take 26 or more Elo from an opponent." },
+			{ name: "Deep Screw", type: "secret", progress: () => stats.eloGains.length && Math.max(...stats.eloGains) >= 40 ? 1 : 0, conditionP: 1, conditionS: 1, description: "Take 40 or more Elo from an opponent." },
 		];
 
 		document.addEventListener("DOMContentLoaded", () => {
@@ -272,7 +273,6 @@
 			calculateStats();
 			generateHeadToHead();
 			renderEloChart();
-			x(stats);
 		}
 
 		function addNewCell(text, isLink = false, winState) {
@@ -294,7 +294,9 @@
 		}
 
 		function calculateStats() {
-			const visibleAchievements = achievements.filter(({ type }) => type !== "secret").length;
+			const visibleAchievements = achievements
+				.filter(achievement => achievement.type !== "secret" && getAchievementCondition(achievement) > 0)
+				.length;
 			const totalMatches = stats.matchesWon + stats.matchesLost;
 			const totalFrames = stats.framesWon + stats.framesLost;
 
@@ -313,6 +315,17 @@
 			renderPlayerStatsCard(totalMatches, totalFrames, visibleAchievements);
 		}
 
+		function getAchievementCondition(achievement) {
+			return params.get("game") === "s" ? achievement.conditionS : achievement.conditionP;
+		}
+
+		function formatAchievementDescription(description, condition) {
+			return description
+				.replaceAll("{x}", condition)
+				.replaceAll("{c}", condition)
+				.replaceAll("{condition}", condition);
+		}
+
 		function calculateAchievements() {
 			const achievementsContainer = document.getElementById("achievements");
 			achievementsContainer.innerHTML = "";
@@ -320,10 +333,15 @@
 
 			let lastType = "";
 
-			achievements.forEach(({ name, type, progress, condition, description }) => {
+			achievements.forEach(achievement => {
+				const { name, type, progress, description } = achievement;
+				const condition = getAchievementCondition(achievement);
+				if (condition <= 0) return;
+
 				const progressValue = progress();
 				const achievementProgress = Math.min(progressValue, condition);
 				const isUnlocked = progressValue >= condition;
+				const achievementDescription = formatAchievementDescription(description, condition);
 
 				if (type === "secret" && !isUnlocked) return;
 
@@ -342,7 +360,7 @@
 							<h5 class="mb-1">${name}</h5>
 							<small>${achievementProgress}/${condition}</small>
 						</div>
-						<p class="mb-1">${description}</p>
+						<p class="mb-1">${achievementDescription}</p>
 					</div>
 				`;
 
@@ -605,11 +623,94 @@
 			`;
 		}
 
+		function createPlayerCardExportNode(card) {
+			const wrapper = document.createElement("div");
+			const style = document.createElement("style");
+			const exportCard = card.cloneNode(true);
+
+			style.textContent = getPlayerCardExportStyles();
+			exportCard.removeAttribute("onclick");
+			exportCard.removeAttribute("title");
+
+			wrapper.style.position = "fixed";
+			wrapper.style.left = "-99999px";
+			wrapper.style.top = "0";
+			wrapper.style.width = "1080px";
+			wrapper.style.height = "1350px";
+			wrapper.style.pointerEvents = "none";
+			wrapper.style.opacity = "1";
+			wrapper.appendChild(style);
+			wrapper.appendChild(exportCard);
+			document.body.appendChild(wrapper);
+
+			return { wrapper, exportCard };
+		}
+
 		function cleanupPlayerCardDownloadUrl() {
 			if (playerCardDownloadUrl) {
 				URL.revokeObjectURL(playerCardDownloadUrl);
 				playerCardDownloadUrl = "";
 			}
+		}
+
+		function getPlayerCardFilename() {
+			return `${playerName || "player"}-${getCurrentGameLabel().toLowerCase()}-stats-card.png`
+				.replace(/\s+/g, "-")
+				.replace(/[^a-z0-9._-]/gi, "-")
+				.replace(/-+/g, "-")
+				.toLowerCase();
+		}
+
+		function isIOSDevice() {
+			return /iPad|iPhone|iPod/.test(navigator.userAgent)
+				|| (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+		}
+
+		function canSharePlayerCardFile(file) {
+			return !!(navigator.share && navigator.canShare && navigator.canShare({ files: [file] }));
+		}
+
+		function triggerPlayerCardDownload(blob, fileName) {
+			playerCardDownloadUrl = URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			link.href = playerCardDownloadUrl;
+			link.download = fileName;
+			link.rel = "noopener";
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+		}
+
+		function openPlayerCardImage(blob, downloadWindow) {
+			playerCardDownloadUrl = URL.createObjectURL(blob);
+			if (downloadWindow && !downloadWindow.closed) {
+				downloadWindow.location.href = playerCardDownloadUrl;
+				return;
+			}
+			window.location.href = playerCardDownloadUrl;
+		}
+
+		async function shareOrDownloadPlayerCard(blob, downloadWindow = null) {
+			const fileName = getPlayerCardFilename();
+
+			if (isIOSDevice()) {
+				openPlayerCardImage(blob, downloadWindow);
+				return;
+			}
+
+			const file = new File([blob], fileName, { type: "image/png" });
+
+			if (canSharePlayerCardFile(file)) {
+				await navigator.share({
+					files: [file],
+					title: "Player Card"
+				});
+				if (downloadWindow && !downloadWindow.closed) downloadWindow.close();
+				return;
+			}
+
+			if (downloadWindow && !downloadWindow.closed) downloadWindow.close();
+			triggerPlayerCardDownload(blob, fileName);
 		}
 
 		function parseEloDelta(value) {
@@ -670,66 +771,42 @@
 		function downloadPlayerStatsCard() {
 			const card = document.getElementById("player-stats-card");
 			const button = document.getElementById("confirm-download-stats-card");
-			if (!card || !button || button.disabled) return;
+			if (!card || !button || button.disabled || typeof html2canvas === "undefined") return;
+			const downloadWindow = isIOSDevice() ? window.open("", "_blank") : null;
+			if (downloadWindow) {
+				downloadWindow.document.write("<!doctype html><title>Preparing player card...</title><body style=\"margin:0;display:grid;min-height:100vh;place-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#101820;color:#fff;\">Preparing player card...</body>");
+				downloadWindow.document.close();
+			}
 
 			button.disabled = true;
 			button.textContent = "Generating...";
 			cleanupPlayerCardDownloadUrl();
+			const exportNode = createPlayerCardExportNode(card);
 
-			const width = 1080;
-			const height = 1350;
-			const serializer = new XMLSerializer();
-			const clone = card.cloneNode(true);
-			clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-
-			const markup = serializer.serializeToString(clone);
-			const styles = getPlayerCardExportStyles();
-			const svg = `
-				<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-					<style>${styles}</style>
-					<foreignObject width="100%" height="100%">
-						${markup}
-					</foreignObject>
-				</svg>
-			`;
-
-			const image = new Image();
-			image.onload = () => {
-				const canvas = document.createElement("canvas");
-				canvas.width = width;
-				canvas.height = height;
-
-				const ctx = canvas.getContext("2d");
-				if (!ctx) {
+			html2canvas(exportNode.exportCard, {
+				backgroundColor: null,
+				scale: 1,
+				useCORS: true
+			})
+				.then(canvas => new Promise((resolve, reject) => {
+					canvas.toBlob(blob => {
+						if (!blob) {
+							reject(new Error("Card export failed."));
+							return;
+						}
+						resolve(blob);
+					}, "image/png");
+				}))
+				.then(blob => shareOrDownloadPlayerCard(blob, downloadWindow))
+				.catch(err => {
+					if (downloadWindow && !downloadWindow.closed) downloadWindow.close();
+					console.error(err);
+				})
+				.finally(() => {
+					exportNode.wrapper.remove();
 					button.disabled = false;
-					button.textContent = "Download image";
-					return;
-				}
-
-				ctx.drawImage(image, 0, 0, width, height);
-				canvas.toBlob(blob => {
-					button.disabled = false;
-					button.textContent = "Download image";
-					if (!blob) return;
-
-					playerCardDownloadUrl = URL.createObjectURL(blob);
-					const link = document.createElement("a");
-					link.href = playerCardDownloadUrl;
-					link.download = `${playerName || "player"}-${getCurrentGameLabel().toLowerCase()}-stats-card.png`
-						.replace(/\s+/g, "-")
-						.toLowerCase();
-					document.body.appendChild(link);
-					link.click();
-					link.remove();
-				}, "image/png");
-			};
-
-			image.onerror = () => {
-				button.disabled = false;
-				button.textContent = "Download image";
-			};
-
-			image.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+					button.textContent = "Download";
+				});
 		}
 
 		function findMostFrequent(array) {
@@ -955,9 +1032,6 @@
 			});
 		}
 
-		function x(str = "DEBUG") {
-			console.log(str);
-		}
 	</script>
 </head>
 
@@ -1072,7 +1146,14 @@
 				<canvas id="elo-chart" style="width:100%;"></canvas>
 			</div>
 
-
+			<div class="share-card-section" style="opacity: 0;">
+				<div class="share-card-panel">
+					<button class="btn btn-secondary stats-card-button share-card-button" id="download-stats-card" type="button"
+						onclick="openPlayerStatsPreview()" disabled>
+						Download Player Card
+					</button>
+				</div>
+			</div>
 		</div>
 
 		<div id="head-to-head" class="tab-pane fade show" role="tabpanel" aria-labelledby="head-to-head-tab"
