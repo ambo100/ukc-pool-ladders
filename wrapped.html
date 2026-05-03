@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UKC Ladder Wrapped &mdash; Pool</title>
+  <style>
+    :root{--bg:#090d12;--panel:#121923;--panel2:#0f1620;--panel3:#0b1118;--text:#eaf2ff;--muted:#a6b3c6;--accent:#36d399;--accent2:#38bdf8;--warn:#fbbf24;--danger:#fb7185}
+    *{box-sizing:border-box}
+    html{scroll-padding-top:88px}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:radial-gradient(circle at 20% 0%,rgba(54,211,153,.14),transparent 30%),radial-gradient(circle at 85% 12%,rgba(56,189,248,.12),transparent 26%),var(--bg);color:var(--text);line-height:1.4}
+    header{position:sticky;top:0;background:#090d12d9;backdrop-filter:blur(10px);padding:12px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));z-index:10;border-bottom:1px solid rgba(234,242,255,.08)}
+    header nav{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+    main{padding-top:0}
+    section{min-height:calc(100svh - 82px);display:grid;place-items:center;padding:clamp(44px,8vw,80px) clamp(12px,3vw,16px)}
+    .card{max-width:1040px;width:100%;background:linear-gradient(145deg,rgba(18,25,35,.96),rgba(15,22,32,.98));border:1px solid rgba(234,242,255,.08);border-radius:8px;padding:clamp(16px,3vw,24px);box-shadow:0 24px 70px rgba(0,0,0,.25)}
+    h1,h2{margin:0 0 12px}
+    h1{font-size:clamp(2rem,8vw,5rem);line-height:1;max-width:780px}
+    h2{font-size:clamp(1.5rem,5vw,3rem);line-height:1.05}
+    .sub{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;margin-top:20px}
+    .stat{grid-column:span 4;background:var(--panel2);border:1px solid rgba(234,242,255,.06);border-radius:8px;padding:14px;min-width:0}
+    .stat.wide{grid-column:span 6}
+    .stat.big{grid-column:span 12}
+    .stat.third{grid-column:span 4}
+    .decider-stat,.decider-list{grid-column:1 / span 6}
+    .whitewash-stat,.whitewash-list{grid-column:7 / span 6}
+    .label{font-size:.85rem;color:var(--muted)}
+    .value{font-size:clamp(1.8rem,7vw,3.2rem);font-weight:900;line-height:1.05}
+    .list{display:grid;gap:8px;margin-top:10px}
+    .row{display:grid;grid-template-columns:32px minmax(0,1fr) max-content;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--panel3);min-width:0}
+    .row.with-date{grid-template-columns:32px minmax(0,1fr) max-content max-content}
+    .rank{width:32px;height:32px;display:grid;place-items:center;border-radius:6px;background:var(--panel);font-weight:800}
+    .row.rank-1{background:rgba(251,191,36,.18)}
+    .row.rank-2{background:rgba(203,213,225,.15)}
+    .row.rank-3{background:rgba(217,119,6,.16)}
+    .who{font-weight:700;min-width:0;overflow-wrap:anywhere;line-height:1.2}
+    .date{color:var(--muted);font-size:.9rem;font-weight:800;white-space:nowrap}
+    .score{font-weight:900;white-space:nowrap}
+    .meta{color:var(--muted);font-size:.85rem;margin-top:6px}
+    .hero-metric{grid-column:span 4;background:linear-gradient(160deg,rgba(54,211,153,.16),rgba(56,189,248,.08));border-color:rgba(54,211,153,.22)}
+    .hero-metric:nth-child(2){background:linear-gradient(160deg,rgba(56,189,248,.16),rgba(251,191,36,.06));border-color:rgba(56,189,248,.22)}
+    .hero-metric:nth-child(3){background:linear-gradient(160deg,rgba(251,191,36,.14),rgba(251,113,133,.07));border-color:rgba(251,191,36,.22)}
+    button.tab{border:1px solid rgba(234,242,255,.14);background:rgba(18,25,35,.55);color:var(--text);padding:7px 12px;min-height:36px;border-radius:999px;font-weight:800;cursor:pointer}
+    button.tab.active,button.tab[aria-pressed="true"]{background:rgba(54,211,153,.16);border-color:rgba(54,211,153,.5)}
+    button.tab:focus-visible{outline:3px solid rgba(56,189,248,.55);outline-offset:2px}
+    button.tab:disabled{cursor:wait;opacity:.65}
+    @media(max-width:900px){.stat.third{grid-column:span 12}.stat.wide,.decider-stat,.decider-list,.whitewash-stat,.whitewash-list{grid-column:span 12}.decider-stat{order:1}.decider-list{order:2}.whitewash-stat{order:3}.whitewash-list{order:4}}
+    @media(max-width:700px){html{scroll-padding-top:88px}header{padding:10px 12px}header nav{gap:6px}.tab{flex:1 1 72px}section{min-height:auto;place-items:start center;padding:32px 10px}.grid{gap:10px;margin-top:16px}.stat,.stat.wide,.stat.third,.hero-metric{grid-column:span 12}.list{gap:7px}.row{grid-template-columns:30px minmax(0,1fr) max-content;padding:8px;gap:8px}.row.with-date{grid-template-columns:30px minmax(0,1fr) max-content max-content}.rank{width:30px;height:30px}.score{font-size:.95rem}.date{font-size:.85rem}.label,.meta{font-size:.8rem}}
+    @media(max-width:390px){body{font-size:.95rem}section{padding:24px 8px}.card{padding:14px}.stat{padding:12px}.row,.row.with-date{grid-template-columns:28px minmax(0,1fr);align-items:start}.rank{width:28px;height:28px}.date,.score{grid-column:2;justify-self:start}.value{font-size:clamp(1.7rem,12vw,2.5rem)}button.tab{padding:7px 10px}}
+  </style>
+</head>
+<body>
+<header>
+  <strong>UKC Ladder Wrapped</strong> &mdash; Pool
+  <nav aria-label="Wrapped year"></nav>
+</header>
+<main>
+<section>
+  <div class="card">
+    <h1 id="page_title">UKC Pool Ladders</h1>
+    <div class="grid">
+      <div class="stat hero-metric"><div class="label">Total Matches</div><div class="value" id="m_total">&ndash;</div></div>
+      <div class="stat hero-metric"><div class="label">Total Frames</div><div class="value" id="m_frames">&ndash;</div></div>
+      <div class="stat hero-metric"><div class="label">Unique Players</div><div class="value" id="m_players">&ndash;</div></div>
+    </div>
+  </div>
+</section>
+<section>
+  <div class="card">
+    <h2>Leaderboards</h2>
+    <div class="grid">
+      <div class="stat third"><div class="label">Matches</div><div class="list" id="list_played"></div></div>
+      <div class="stat third"><div class="label">Wins</div><div class="list" id="list_wins"></div></div>
+      <div class="stat third"><div class="label">Framerate</div><div class="list" id="list_winRate"></div></div>
+    </div>
+  </div>
+</section>
+<section>
+  <div class="card">
+    <h2>Biggest Match Days</h2>
+    <div class="grid">
+      <div class="stat wide"><div class="label">Overall</div><div class="list" id="list_matchDays"></div></div>
+      <div class="stat wide"><div class="label">Single Player</div><div class="list" id="list_playerMatchDays"></div></div>
+    </div>
+  </div>
+</section>
+<section>
+  <div class="card">
+    <h2>Deciders and Whitewashes</h2>
+    <div class="grid">
+      <div class="stat wide decider-stat"><div class="label">Deciders (5&ndash;4)</div><div class="value" id="m_deciders">&ndash;</div></div>
+      <div class="stat wide whitewash-stat"><div class="label">Whitewashes (5&ndash;0)</div><div class="value" id="m_whitewashes">&ndash;</div></div>
+      <div class="stat wide decider-list"><div class="list" id="list_deciderWins"></div></div>
+      <div class="stat wide whitewash-list"><div class="list" id="list_whitewashWins"></div></div>
+    </div>
+  </div>
+</section>
+<section>
+  <div class="card">
+    <h2>Rivalries</h2>
+    <div class="grid">
+      <div class="stat big"><div class="list" id="list_matchups"></div></div>
+    </div>
+  </div>
+</section>
+<section>
+  <div class="card">
+    <h2>Elo Swings</h2>
+    <div class="grid">
+      <div class="stat wide"><div class="label">Total Elo Movement</div><div class="value" id="m_eloTotal">&ndash;</div></div>
+      <div class="stat wide"><div class="label">Average Elo Win</div><div class="value" id="m_avgEloWin">&ndash;</div></div>
+      <div class="stat wide"><div class="label">Top 10 Biggest Elo Swings</div><div class="list" id="list_bigElo"></div></div>
+      <div class="stat wide"><div class="label">Bottom 10 Elo Swings</div><div class="list" id="list_smallElo"></div></div>
+      <div class="stat wide"><div class="label">Top 10 Total Elo Gained</div><div class="list" id="list_eloGained"></div></div>
+      <div class="stat wide"><div class="label">Top 10 Total Elo Lost</div><div class="list" id="list_eloLost"></div></div>
+    </div>
+  </div>
+</section>
+<section>
+  <div class="card">
+    <h2>Challengers</h2>
+    <div class="grid">
+      <div class="stat big"><div class="label">Percentage of matches against a high ranking opponent</div><div class="list" id="list_riskFactor"></div></div>
+    </div>
+  </div>
+</section>
+<section>
+  <div class="card">
+    <h2>Win Streaks</h2>
+    <div class="grid">
+      <div class="stat wide"><div class="label">Longest Win Streaks</div><div class="list" id="list_longestWinStreak"></div></div>
+      <div class="stat wide"><div class="label">Streak Breakers</div><div class="list" id="list_streakBreakers"></div></div>
+    </div>
+  </div>
+</section>
+</main>
+<script>
+(() => {
+  const SHEETS = {
+    2021: 'https://sheets.googleapis.com/v4/spreadsheets/16MHKcccaEF5Dp_hGUSZKSK6N3NY-CcKzyeLeHTM7ZRI/values/Pool!X:AG?key=AIzaSyBzx9C98J2--o4tZgymHKYSM5DnOgcte8o',
+    2024: 'https://sheets.googleapis.com/v4/spreadsheets/1zqBPq_u3drAYpjE7HW4aMQIroxDzKBYgMygCuA3cyXs/values/Pool!X:AG?key=AIzaSyBzx9C98J2--o4tZgymHKYSM5DnOgcte8o',
+    2025: 'https://sheets.googleapis.com/v4/spreadsheets/1fCcuihYAGGjw6GFKobU1pJxZWa2Nrz9mY7Z33aQ_9wg/values/Pool!X:AG?key=AIzaSyBzx9C98J2--o4tZgymHKYSM5DnOgcte8o'
+  };
+  const METRIC_IDS = ['m_total','m_players','m_frames','m_deciders','m_whitewashes','m_eloTotal','m_avgEloWin'];
+  const META_IDS = [];
+  const LIST_IDS = ['list_played','list_wins','list_winRate','list_matchDays','list_playerMatchDays','list_deciderWins','list_whitewashWins','list_matchups','list_bigElo','list_smallElo','list_eloGained','list_eloLost','list_riskFactor','list_longestWinStreak','list_streakBreakers'];
+  const YEARS = Object.keys(SHEETS).map(Number).sort((a,b) => a - b);
+  let YEAR = Math.max(...YEARS);
+  let loadToken = 0;
+  let hasStartedPreload = false;
+  const yearCache = new Map();
+  const yearRequests = new Map();
+  const $ = id => document.getElementById(id);
+  const fmt = n => (n ?? 0).toLocaleString('en-GB');
+  const pct = n => `${Number(n).toFixed(1)}%`;
+  const seasonLabel = year => {
+    const start = String(year).slice(-2);
+    const end = String(year + 1).slice(-2);
+    return `${start}/${end}`;
+  };
+
+  function parseScore(value) {
+    const match = String(value ?? '').match(/(\d+)[^\d]+(\d+)/);
+    if (!match) return null;
+    const aScore = Number(match[1]);
+    const bScore = Number(match[2]);
+    if (!Number.isFinite(aScore) || !Number.isFinite(bScore) || aScore === bScore) return null;
+    return {
+      aScore,
+      bScore,
+      winnerScore: Math.max(aScore, bScore),
+      loserScore: Math.min(aScore, bScore),
+      text: `${aScore}-${bScore}`
+    };
+  }
+
+  function parseSignedElo(value) {
+    const match = String(value ?? '').match(/[-+]\s*\d+/);
+    return match ? parseInt(match[0].replace(/\s+/g, ''), 10) : 0;
+  }
+
+  function parseUkDate(value) {
+    const match = String(value ?? '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    return match ? new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1])).getTime() : 0;
+  }
+
+  function increment(map, key, amount = 1) {
+    if (!key) return;
+    map.set(key, (map.get(key) || 0) + amount);
+  }
+
+  function clearList(id, message = 'Loading...') {
+    const list = $(id);
+    list.replaceChildren();
+    const empty = document.createElement('div');
+    empty.className = 'meta';
+    empty.textContent = message;
+    list.appendChild(empty);
+  }
+
+  function setLoadingState() {
+    METRIC_IDS.forEach(id => { $(id).textContent = '-'; });
+    META_IDS.forEach(id => { $(id).textContent = ''; });
+    LIST_IDS.forEach(id => clearList(id));
+  }
+
+  function createRow(rank, title, displayValue, dateValue = '') {
+    const row = document.createElement('div');
+    row.className = `row rank-${rank}`;
+    if (dateValue) row.classList.add('with-date');
+
+    const rankEl = document.createElement('div');
+    rankEl.className = 'rank';
+    rankEl.textContent = rank;
+
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = title;
+
+    const score = document.createElement('div');
+    score.className = 'score';
+    score.textContent = displayValue;
+
+    row.append(rankEl, who);
+    if (dateValue) {
+      const date = document.createElement('div');
+      date.className = 'date';
+      date.textContent = dateValue;
+      row.appendChild(date);
+    }
+    row.appendChild(score);
+    return row;
+  }
+
+  function renderList(id, items, options = {}) {
+    const list = $(id);
+    list.replaceChildren();
+    if (!items.length) {
+      clearList(id, 'No data.');
+      return;
+    }
+
+    items.forEach((item, index) => {
+      const display = options.format ? options.format(item.value, item) : item.value;
+      list.appendChild(createRow(index + 1, item.title, String(display), item.date));
+    });
+  }
+
+  function topFromMap(map, limit, mapper = ([title, value]) => ({title, value})) {
+    return [...map.entries()].sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(mapper);
+  }
+
+  function parseRows(rows) {
+    const matches = [];
+    for (const row of rows) {
+      const score = parseScore(row[5]);
+      const date = String(row[0] ?? '').trim();
+      const playerA = String(row[2] ?? '').trim();
+      const playerB = String(row[9] ?? '').trim();
+      if (!score || !date || !playerA || !playerB) continue;
+
+      const winner = score.aScore > score.bScore ? playerA : playerB;
+      const loser = winner === playerA ? playerB : playerA;
+      const eloA = parseSignedElo(row[4]);
+      const eloB = parseSignedElo(row[7]);
+      const swing = Math.max(Math.abs(eloA), Math.abs(eloB));
+      const winElo = Math.abs(winner === playerA ? eloA : eloB);
+      const lossElo = Math.abs(loser === playerA ? eloA : eloB);
+      matches.push({
+        date,
+        playerA,
+        playerB,
+        winner,
+        loser,
+        score,
+        frames: score.aScore + score.bScore,
+        swing,
+        eloA,
+        eloB,
+        winElo,
+        lossElo
+      });
+    }
+    return matches;
+  }
+
+  function renderStats(matches) {
+    const played = new Map();
+    const wins = new Map();
+    const framesWon = new Map();
+    const framesPlayed = new Map();
+    const deciderWins = new Map();
+    const whitewashWins = new Map();
+    const matchDays = new Map();
+    const playerMatchDays = new Map();
+    const matchups = new Map();
+    const rivalryFrames = new Map();
+    const eloGained = new Map();
+    const eloLost = new Map();
+    const currentWinStreaks = new Map();
+    const longestWinStreaks = new Map();
+    const streakBreakers = [];
+    const playerElos = new Map();
+    const higherRankedMatches = new Map();
+    let deciders = 0;
+    let whitewashes = 0;
+
+    matches.forEach(match => {
+      increment(matchDays, match.date);
+      increment(playerMatchDays, `${match.playerA}\t${match.date}`);
+      increment(playerMatchDays, `${match.playerB}\t${match.date}`);
+      increment(played, match.playerA);
+      increment(played, match.playerB);
+      increment(framesWon, match.playerA, match.score.aScore);
+      increment(framesWon, match.playerB, match.score.bScore);
+      increment(framesPlayed, match.playerA, match.frames);
+      increment(framesPlayed, match.playerB, match.frames);
+      increment(wins, match.winner);
+      increment(eloGained, match.winner, match.winElo);
+      increment(eloLost, match.loser, match.lossElo);
+
+      const playerAElo = playerElos.get(match.playerA) || 1000;
+      const playerBElo = playerElos.get(match.playerB) || 1000;
+      if (playerBElo > playerAElo) increment(higherRankedMatches, match.playerA);
+      if (playerAElo > playerBElo) increment(higherRankedMatches, match.playerB);
+      playerElos.set(match.playerA, playerAElo + match.eloA);
+      playerElos.set(match.playerB, playerBElo + match.eloB);
+
+      const brokenStreak = currentWinStreaks.get(match.loser) || 0;
+      if (brokenStreak > 0) {
+        streakBreakers.push({
+          title: `${match.winner} beats ${match.loser}`,
+          value: brokenStreak,
+          sortDate: match.date
+        });
+      }
+
+      const winnerStreak = (currentWinStreaks.get(match.winner) || 0) + 1;
+      currentWinStreaks.set(match.winner, winnerStreak);
+      currentWinStreaks.set(match.loser, 0);
+      longestWinStreaks.set(match.winner, Math.max(longestWinStreaks.get(match.winner) || 0, winnerStreak));
+      if (!longestWinStreaks.has(match.loser)) longestWinStreaks.set(match.loser, 0);
+
+      if (match.score.winnerScore === 5 && match.score.loserScore === 4) {
+        deciders++;
+        increment(deciderWins, match.winner);
+      }
+      if (match.score.winnerScore === 5 && match.score.loserScore === 0) {
+        whitewashes++;
+        increment(whitewashWins, match.winner);
+      }
+
+      const key = [match.playerA, match.playerB].sort((a,b) => a.localeCompare(b)).join(' vs ');
+      increment(matchups, key);
+
+      const rivalry = rivalryFrames.get(key) || {
+        players: [match.playerA, match.playerB].sort((a,b) => a.localeCompare(b)),
+        frames: new Map(),
+        matches: 0
+      };
+      increment(rivalry.frames, match.playerA, match.score.aScore);
+      increment(rivalry.frames, match.playerB, match.score.bScore);
+      rivalry.matches++;
+      rivalryFrames.set(key, rivalry);
+    });
+
+    const totalFrames = matches.reduce((sum, match) => sum + match.frames, 0);
+    const frameWinRates = [...played.entries()]
+      .filter(([,games]) => games >= 10)
+      .map(([title, games]) => {
+        const won = framesWon.get(title) || 0;
+        const playedFrames = framesPlayed.get(title) || 0;
+        return {title, value: playedFrames ? (won / playedFrames) * 100 : 0, games, won, playedFrames};
+      })
+      .sort((a,b) => b.value - a.value || b.won - a.won || a.title.localeCompare(b.title))
+      .slice(0, 5);
+    const validElo = matches.filter(match => match.swing > 0);
+    const bigElo = [...validElo].sort((a,b) => b.swing - a.swing).slice(0, 10);
+    const smallElo = [...validElo].sort((a,b) => a.swing - b.swing).slice(0, 10);
+    const matchupItems = [...rivalryFrames.entries()]
+      .map(([title, rivalry]) => {
+        return {title, value: rivalry.matches};
+      })
+      .sort((a,b) => b.value - a.value || a.title.localeCompare(b.title))
+      .slice(0, 10);
+
+    $('m_total').textContent = fmt(matches.length);
+    $('m_frames').textContent = fmt(totalFrames);
+    $('m_players').textContent = fmt(new Set(matches.flatMap(match => [match.playerA, match.playerB])).size);
+    $('m_deciders').textContent = fmt(deciders);
+    $('m_whitewashes').textContent = fmt(whitewashes);
+    $('m_eloTotal').textContent = fmt(validElo.reduce((sum, match) => sum + match.swing, 0));
+    $('m_avgEloWin').textContent = validElo.length ? Number(validElo.reduce((sum, match) => sum + match.winElo, 0) / validElo.length).toFixed(1) : '-';
+
+    renderList('list_played', topFromMap(played, 5));
+    renderList('list_wins', topFromMap(wins, 5));
+    renderList('list_winRate', frameWinRates, {format: value => pct(value)});
+    renderList('list_matchDays', [...matchDays.entries()]
+      .sort((a,b) => b[1] - a[1] || parseUkDate(b[0]) - parseUkDate(a[0]))
+      .slice(0, 5)
+      .map(([title, value]) => ({title, value})));
+    renderList('list_playerMatchDays', [...playerMatchDays.entries()]
+      .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 5)
+      .map(([key, value]) => {
+        const [title, date] = key.split('\t');
+        return {title, date, value};
+      }));
+    renderList('list_deciderWins', topFromMap(deciderWins, 10));
+    renderList('list_whitewashWins', topFromMap(whitewashWins, 10));
+    renderList('list_matchups', matchupItems);
+    renderList('list_bigElo', bigElo.map(match => ({title: `${match.winner} beats ${match.loser}`, value: match.swing})));
+    renderList('list_smallElo', smallElo.map(match => ({title: `${match.winner} beats ${match.loser}`, value: match.swing})));
+    renderList('list_eloGained', topFromMap(eloGained, 10));
+    renderList('list_eloLost', topFromMap(eloLost, 10));
+    renderList('list_riskFactor', [...played.entries()]
+      .map(([title]) => {
+        const totalMatches = played.get(title) || 0;
+        const higherMatches = higherRankedMatches.get(title) || 0;
+        return {
+          title,
+          totalMatches,
+          value: totalMatches ? (higherMatches / totalMatches) * 100 : 0
+        };
+      })
+      .filter(item => item.totalMatches >= 10)
+      .sort((a,b) => b.value - a.value || b.totalMatches - a.totalMatches || a.title.localeCompare(b.title))
+      .slice(0, 10)
+      .map(item => ({title: item.title, value: pct(item.value)})));
+    renderList('list_longestWinStreak', topFromMap(longestWinStreaks, 10).filter(item => item.value > 0), {format: value => fmt(value)});
+    renderList('list_streakBreakers', streakBreakers
+      .sort((a,b) => b.value - a.value || parseUkDate(b.sortDate) - parseUkDate(a.sortDate) || a.title.localeCompare(b.title))
+      .slice(0, 10), {format: value => fmt(value)});
+
+  }
+
+  function setActiveYear(year) {
+    $('page_title').textContent = `UKC Pool Ladders ${seasonLabel(year)}`;
+    document.querySelectorAll('.tab').forEach(button => {
+      const active = Number(button.dataset.year) === year;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  function setButtonsDisabled(disabled) {
+    document.querySelectorAll('.tab').forEach(button => { button.disabled = disabled; });
+  }
+
+  async function fetchMatches(year) {
+    if (yearCache.has(year)) return yearCache.get(year);
+    if (yearRequests.has(year)) return yearRequests.get(year);
+
+    const request = fetch(SHEETS[year])
+      .then(response => {
+        if (!response.ok) throw new Error(`Google Sheets returned ${response.status}`);
+        return response.json();
+      })
+      .then(payload => {
+        if (!Array.isArray(payload.values)) throw new Error('No sheet values were returned');
+        const matches = parseRows(payload.values.slice(4));
+        yearCache.set(year, matches);
+        return matches;
+      })
+      .finally(() => {
+        yearRequests.delete(year);
+      });
+
+    yearRequests.set(year, request);
+    return request;
+  }
+
+  function preloadOtherYears() {
+    if (hasStartedPreload) return;
+    hasStartedPreload = true;
+    YEARS.filter(year => year !== YEAR).forEach(year => {
+      fetchMatches(year).catch(() => {});
+    });
+  }
+
+  async function load() {
+    const token = ++loadToken;
+    setActiveYear(YEAR);
+    if (yearCache.has(YEAR)) {
+      const matches = yearCache.get(YEAR);
+      renderStats(matches);
+      return;
+    }
+
+    setLoadingState();
+    setButtonsDisabled(true);
+
+    try {
+      const matches = await fetchMatches(YEAR);
+      if (token !== loadToken) return;
+
+      renderStats(matches);
+      preloadOtherYears();
+    } catch (error) {
+      if (token !== loadToken) return;
+      setLoadingState();
+      LIST_IDS.forEach(id => clearList(id, 'Unable to load data.'));
+      console.error(`Could not load ${YEAR}:`, error);
+    } finally {
+      if (token === loadToken) setButtonsDisabled(false);
+    }
+  }
+
+  const nav = document.querySelector('nav');
+  YEARS.forEach(year => {
+    const button = document.createElement('button');
+    button.className = 'tab';
+    button.type = 'button';
+    button.dataset.year = year;
+    button.textContent = year;
+    button.setAttribute('aria-pressed', String(year === YEAR));
+    button.addEventListener('click', () => {
+      YEAR = year;
+      load();
+    });
+    nav.appendChild(button);
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
