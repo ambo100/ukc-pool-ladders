@@ -43,6 +43,7 @@
 		let rowCount = 0;
 		let newCell, newText, newRow;
 		let eloChart = null;
+		let frameRateChart = null;
 		let playerCardDownloadUrl = "";
 		let playerCardModal = null;
 		let currentPlayerCardTheme = 0;
@@ -72,8 +73,10 @@
 			uniquePlayers: [],
 			playersBeaten: [],
 			matchCount: [0],
+			frameWinRateHistory: [],
 			matchDates: [],
 			eloHistory: [1000],
+			eloMatchHistory: [],
 			eloGainsTotal: 0,
 			eloGains: [],
 			eloLosses: [],
@@ -204,6 +207,7 @@
 
 						const eloGain = parseInt((row[4] || "").substring(2), 10) || 0;
 						stats.eloHistory.push(stats.eloHistory[stats.eloHistory.length - 1] + eloGain);
+						stats.eloMatchHistory.push(stats.eloHistory[stats.eloHistory.length - 1]);
 						stats.eloGains.push(eloGain);
 						stats.winStreakCurrent++;
 
@@ -247,6 +251,7 @@
 
 						const eloLoss = parseInt((row[4] || "").substring(2), 10) || 0;
 						stats.eloHistory.push(stats.eloHistory[stats.eloHistory.length - 1] - eloLoss);
+						stats.eloMatchHistory.push(stats.eloHistory[stats.eloHistory.length - 1]);
 						stats.eloLosses.push(eloLoss);
 						stats.matchesLost++;
 
@@ -260,6 +265,10 @@
 					}
 
 					stats.matchCount.push(resultsTableBody.rows.length);
+					const matchFramesTotal = stats.framesWon + stats.framesLost;
+					stats.frameWinRateHistory.push(
+						matchFramesTotal ? +((stats.framesWon / matchFramesTotal) * 100).toFixed(1) : 0
+					);
 				}
 			}
 
@@ -273,6 +282,7 @@
 			calculateStats();
 			generateHeadToHead();
 			renderEloChart();
+			renderFrameRateChart();
 		}
 
 		function addNewCell(text, isLink = false, winState) {
@@ -465,7 +475,7 @@
 			const button = document.getElementById("download-stats-card");
 			const confirmButton = document.getElementById("confirm-download-stats-card");
 
-			if (!card || !rank || !subtitle || !headline || !summary || !metrics || !footer || !button || !confirmButton) return;
+			if (!card || !rank || !subtitle || !headline || !summary || !metrics || !footer || !confirmButton) return;
 
 			const matchWinRate = totalMatches ? ((stats.matchesWon / totalMatches) * 100).toFixed(1) + "%" : "0.0%";
 			const frameWinRate = totalFrames ? ((stats.framesWon / totalFrames) * 100).toFixed(1) + "%" : "0.0%";
@@ -508,8 +518,10 @@
 			`;
 
 			footer.textContent = "instagram.com/ukcsnookerandpool";
-			button.disabled = !totalMatches;
-			button.setAttribute("aria-disabled", String(!totalMatches));
+			if (button) {
+				button.disabled = !totalMatches;
+				button.setAttribute("aria-disabled", String(!totalMatches));
+			}
 			confirmButton.disabled = !totalMatches;
 		}
 
@@ -1007,22 +1019,130 @@
 			eloChart = new Chart(canvas, {
 				type: "line",
 				data: {
-					labels: stats.matchCount,
+					labels: stats.matchCount.slice(1),
 					datasets: [{
-						data: stats.eloHistory,
-						backgroundColor: "#ffffff",
-						borderColor: "#ADBCCC",
-						color: "#ffffff",
-						lineTension: 0
+						label: "Elo",
+						data: stats.eloMatchHistory,
+						backgroundColor: "#9bc7ff",
+						borderColor: "#9bc7ff",
+						color: "#9bc7ff",
+						borderWidth: 3,
+						pointRadius: 0,
+						pointHoverRadius: 4,
+						lineTension: 0.2
 					}]
 				},
 				options: {
 					maintainAspectRatio: false,
 					plugins: {
-						legend: { display: false }
+						title: {
+							display: true,
+							text: "Elo",
+							color: "#ffffff",
+							padding: {
+								bottom: 10
+							}
+						},
+						legend: {
+							display: false
+						}
 					},
 					scales: {
+						x: {
+							ticks: {
+								color: "rgba(255,255,255,0.7)",
+								autoSkip: false,
+								callback: (value, index) => {
+									const label = stats.matchCount.slice(1)[index];
+									const step = (stats.matchCount[stats.matchCount.length - 1] || 0) >= 60 ? 10 : 5;
+									return label % step === 0 ? label : "";
+								}
+							},
+							grid: {
+								color: "rgba(255,255,255,0.06)"
+							}
+						},
 						y: {
+							ticks: {
+								color: "#9bc7ff"
+							},
+							grid: {
+								color: "rgba(255,255,255,0.12)"
+							}
+						}
+					}
+				}
+			});
+		}
+
+		function renderFrameRateChart() {
+			const canvas = document.getElementById("frame-rate-chart");
+			if (!canvas) return;
+
+			if (frameRateChart) {
+				frameRateChart.destroy();
+			}
+
+			const frameRateValues = stats.frameWinRateHistory.filter(value => Number.isFinite(value));
+			const minRate = frameRateValues.length ? Math.min(...frameRateValues) : 0;
+			const maxRate = frameRateValues.length ? Math.max(...frameRateValues) : 100;
+			const yMin = Math.max(0, Math.floor(minRate / 5) * 5);
+			const yMax = Math.min(100, Math.ceil(maxRate / 5) * 5);
+
+			frameRateChart = new Chart(canvas, {
+				type: "line",
+				data: {
+					labels: stats.matchCount.slice(1),
+					datasets: [{
+						label: "Frame Rate",
+						data: stats.frameWinRateHistory,
+						backgroundColor: "#82f3a5",
+						borderColor: "#82f3a5",
+						color: "#82f3a5",
+						borderWidth: 3,
+						pointRadius: 0,
+						pointHoverRadius: 4,
+						lineTension: 0.2
+					}]
+				},
+				options: {
+					maintainAspectRatio: false,
+					plugins: {
+						title: {
+							display: true,
+							text: "Frame Rate",
+							color: "#ffffff",
+							padding: {
+								bottom: 10
+							}
+						},
+						legend: {
+							display: false
+						}
+					},
+					scales: {
+						x: {
+							ticks: {
+								color: "rgba(255,255,255,0.7)",
+								autoSkip: false,
+								callback: (value, index) => {
+									const label = stats.matchCount.slice(1)[index];
+									const step = (stats.matchCount[stats.matchCount.length - 1] || 0) >= 60 ? 10 : 5;
+									return label % step === 0 ? label : "";
+								}
+							},
+							grid: {
+								color: "rgba(255,255,255,0.06)"
+							}
+						},
+						y: {
+							min: yMin,
+							max: yMax <= yMin ? Math.min(100, yMin + 5) : yMax,
+							ticks: {
+								stepSize: 5,
+								callback: value => value + "%",
+								color: "#82f3a5"
+							},
 							grid: {
 								color: "rgba(255,255,255,0.12)"
 							}
@@ -1140,18 +1260,22 @@
 				</div>
 			</div>
 
-			<br>
+			<div class="stats-chart-grid">
+				<div class="container-fluid d-flex justify-content-center stats-chart-wrap">
+					<canvas id="elo-chart" style="width:100%;"></canvas>
+				</div>
 
-			<div class="container-fluid d-flex justify-content-center" style="max-height: 350px;">
-				<canvas id="elo-chart" style="width:100%;"></canvas>
+				<div class="container-fluid d-flex justify-content-center stats-chart-wrap stats-chart-wrap-secondary">
+					<canvas id="frame-rate-chart" style="width:100%;"></canvas>
+				</div>
 			</div>
 
 			<div class="share-card-section" style="opacity: 0;">
 				<div class="share-card-panel">
-					<button class="btn btn-secondary stats-card-button share-card-button" id="download-stats-card" type="button"
+					<!-- <button class="btn btn-secondary stats-card-button share-card-button" id="download-stats-card" type="button"
 						onclick="openPlayerStatsPreview()" disabled>
 						Download Player Card
-					</button>
+					</button> -->
 				</div>
 			</div>
 		</div>
