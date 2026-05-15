@@ -108,6 +108,22 @@ a {
   font-weight: 700;
 }
 
+.stats-chart-wrap {
+  max-height: 280px;
+  margin-top: 14px;
+}
+
+.stats-chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.stats-chart-wrap-secondary {
+  margin-top: 14px;
+}
+
 .player-card-shell {
   display: flex;
   justify-content: center;
@@ -359,6 +375,22 @@ a {
 @media (max-width: 580px) {
   span.nav-text {
     display: none;
+  }
+
+  .stats-chart-wrap {
+    max-height: 150px;
+    margin-top: 10px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .stats-chart-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .stats-chart-wrap-secondary {
+    margin-top: 12px;
   }
 
   .player-card-inner {
